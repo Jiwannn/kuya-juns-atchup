@@ -1,14 +1,19 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Upload, Image as ImageIcon, X, Camera } from "lucide-react";
+import { Upload, Image as ImageIcon, X } from "lucide-react";
+
+// Disable static generation for this page
+export const dynamic = 'force-dynamic';
+export const fetchCache = 'force-no-store';
 
 export default function NewProduct() {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const [isMounted, setIsMounted] = useState(false);
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -21,8 +26,12 @@ export default function NewProduct() {
     is_available: true
   });
 
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
   // Check authentication and admin role
-  if (status === "loading") {
+  if (status === "loading" || !isMounted) {
     return (
       <div className="min-h-screen bg-orange-50 flex items-center justify-center">
         <div className="text-center">
@@ -38,66 +47,10 @@ export default function NewProduct() {
     return null;
   }
 
-  // Compress image before uploading
-  const compressImage = (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.readAsDataURL(file);
-      reader.onload = (event) => {
-        const img = new Image();
-        img.src = event.target?.result as string;
-        img.onload = () => {
-          // Create canvas for resizing
-          const canvas = document.createElement('canvas');
-          let width = img.width;
-          let height = img.height;
-          
-          // Max dimensions for product images
-          const MAX_WIDTH = 800;
-          const MAX_HEIGHT = 800;
-          
-          // Calculate new dimensions while maintaining aspect ratio
-          if (width > height) {
-            if (width > MAX_WIDTH) {
-              height *= MAX_WIDTH / width;
-              width = MAX_WIDTH;
-            }
-          } else {
-            if (height > MAX_HEIGHT) {
-              width *= MAX_HEIGHT / height;
-              height = MAX_HEIGHT;
-            }
-          }
-          
-          canvas.width = width;
-          canvas.height = height;
-          
-          // Draw resized image
-          const ctx = canvas.getContext('2d');
-          ctx?.drawImage(img, 0, 0, width, height);
-          
-          // Convert to compressed JPEG (0.8 quality = 80%)
-          const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.8);
-          resolve(compressedDataUrl);
-        };
-        img.onerror = reject;
-      };
-      reader.onerror = reject;
-    });
-  };
-
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      // Check file size (max 10MB)
-      if (file.size > 10 * 1024 * 1024) {
-        alert("File too large. Please select an image under 10MB.");
-        return;
-      }
-      
       setImageFile(file);
-      
-      // Show preview immediately
       const reader = new FileReader();
       reader.onloadend = () => {
         setImagePreview(reader.result as string);
@@ -106,19 +59,20 @@ export default function NewProduct() {
     }
   };
 
-  const handleCameraCapture = () => {
-    // This will open camera on mobile devices
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = 'image/*';
-    input.capture = 'environment'; // Use rear camera
-    input.onchange = (e) => handleImageChange(e as any);
-    input.click();
-  };
-
   const removeImage = () => {
     setImageFile(null);
     setImagePreview(null);
+  };
+
+  const uploadImage = async (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        resolve(reader.result as string);
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -135,15 +89,13 @@ export default function NewProduct() {
 
       let imageUrl = "";
       
-      // Compress and upload image if selected
+      // Upload image if selected
       if (imageFile) {
         setUploading(true);
         try {
-          // Compress the image
-          imageUrl = await compressImage(imageFile);
-          console.log("Image compressed successfully");
+          imageUrl = await uploadImage(imageFile);
         } catch (error) {
-          console.error("Error compressing image:", error);
+          console.error("Error processing image:", error);
           alert("Error processing image. Please try again.");
           setUploading(false);
           setLoading(false);
@@ -204,7 +156,7 @@ export default function NewProduct() {
             <div className="border-2 border-dashed border-orange-200 rounded-xl p-6">
               <div className="flex flex-col items-center justify-center">
                 {imagePreview ? (
-                  <div className="relative w-64 h-64 mb-4">
+                  <div className="relative w-48 h-48 mb-4">
                     <img 
                       src={imagePreview} 
                       alt="Preview" 
@@ -213,52 +165,39 @@ export default function NewProduct() {
                     <button
                       type="button"
                       onClick={removeImage}
-                      className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-8 h-8 flex items-center justify-center hover:bg-red-600 transition shadow-lg"
+                      className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center hover:bg-red-600 transition"
                     >
                       <X className="w-4 h-4" />
                     </button>
                   </div>
                 ) : (
-                  <div className="w-32 h-32 bg-orange-100 rounded-full flex items-center justify-center mb-4">
-                    <Camera className="w-12 h-12 text-orange-400" />
+                  <div className="w-24 h-24 bg-orange-100 rounded-full flex items-center justify-center mb-4">
+                    <ImageIcon className="w-12 h-12 text-orange-400" />
                   </div>
                 )}
                 
-                <p className="text-sm text-gray-600 mb-4 text-center">
-                  Take a photo or upload an image of your delicious dish
-                </p>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Product Image
+                </label>
                 
-                <div className="flex gap-3">
-                  {/* Camera button for mobile */}
-                  <button
-                    type="button"
-                    onClick={handleCameraCapture}
-                    className="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition flex items-center gap-2"
-                  >
-                    <Camera className="w-5 h-5" />
-                    Take Photo
-                  </button>
-                  
-                  {/* File upload button */}
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleImageChange}
-                    className="hidden"
-                    id="image-upload"
-                  />
-                  
-                  <label
-                    htmlFor="image-upload"
-                    className="cursor-pointer bg-orange-600 text-white px-6 py-3 rounded-lg hover:bg-orange-700 transition flex items-center gap-2"
-                  >
-                    <Upload className="w-5 h-5" />
-                    Upload Image
-                  </label>
-                </div>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageChange}
+                  className="hidden"
+                  id="image-upload"
+                />
                 
-                <p className="text-xs text-gray-500 mt-4">
-                  Images will be automatically optimized for fast loading • Max size: 10MB
+                <label
+                  htmlFor="image-upload"
+                  className="cursor-pointer bg-orange-100 text-orange-700 px-4 py-2 rounded-lg hover:bg-orange-200 transition flex items-center gap-2"
+                >
+                  <Upload className="w-4 h-4" />
+                  {imagePreview ? "Change Image" : "Upload Image"}
+                </label>
+                
+                <p className="text-xs text-gray-500 mt-2">
+                  Supported formats: JPG, PNG, GIF (Max size: 5MB)
                 </p>
               </div>
             </div>
@@ -325,7 +264,6 @@ export default function NewProduct() {
                 <option value="Food Trays">Food Trays</option>
                 <option value="Catering">Catering</option>
                 <option value="Beverages">Beverages</option>
-                <option value="Desserts">Desserts</option>
               </select>
             </div>
 
@@ -351,7 +289,7 @@ export default function NewProduct() {
                 {loading || uploading ? (
                   <>
                     <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                    {uploading ? "Optimizing Image..." : "Creating Product..."}
+                    {uploading ? "Uploading Image..." : "Creating Product..."}
                   </>
                 ) : (
                   <>

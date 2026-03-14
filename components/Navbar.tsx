@@ -6,21 +6,39 @@ import { useCart } from "@/context/CartContext";
 import { ShoppingCart, User, LogOut, Menu as MenuIcon, ChefHat, Package, LayoutDashboard } from "lucide-react";
 import { useState } from "react";
 import NotificationBell from "./NotificationBell";
-import { usePathname } from "next/navigation";
+import { useRouter } from "next/navigation";
 
 export default function Navbar() {
   const { data: session } = useSession();
   const { totalItems, toggleCart } = useCart();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const pathname = usePathname();
+  const router = useRouter();
 
   const isAdmin = session?.user?.role === 'admin';
   const isLoggedIn = !!session;
 
-  // Don't render on admin pages (just in case)
-  if (pathname?.startsWith('/admin')) {
-    return null;
-  }
+  const handleSignOut = async () => {
+    try {
+      // Clear all storage
+      localStorage.clear();
+      sessionStorage.clear();
+      
+      // Clear cookies by calling logout API
+      await fetch('/api/auth/logout', { method: 'POST' });
+      
+      // Sign out from NextAuth with no redirect
+      await signOut({ 
+        redirect: false
+      });
+      
+      // Force hard redirect to login page
+      window.location.href = '/auth/signin';
+    } catch (error) {
+      console.error('Logout error:', error);
+      // Ultimate fallback
+      window.location.href = '/auth/signin';
+    }
+  };
 
   return (
     <nav className="bg-gradient-to-r from-orange-700 to-orange-600 text-white shadow-lg sticky top-0 z-40">
@@ -100,7 +118,7 @@ export default function Navbar() {
                   </div>
                 </div>
                 <button 
-                  onClick={() => signOut()} 
+                  onClick={handleSignOut}
                   className="bg-orange-800 p-2 rounded-full hover:bg-orange-900 transition"
                   title="Sign out"
                 >
@@ -168,7 +186,7 @@ export default function Navbar() {
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
                   <LayoutDashboard className="w-5 h-5" />
-                  Admin
+                  Admin Dashboard
                 </Link>
               )}
               
@@ -185,7 +203,13 @@ export default function Navbar() {
                       <p className="text-xs text-orange-200">{isAdmin ? 'Administrator' : 'Customer'}</p>
                     </div>
                   </div>
-                  <button onClick={() => { signOut(); setIsMobileMenuOpen(false); }} className="bg-orange-800 p-2 rounded-full hover:bg-orange-900 transition">
+                  <button 
+                    onClick={() => {
+                      handleSignOut();
+                      setIsMobileMenuOpen(false);
+                    }} 
+                    className="bg-orange-800 p-2 rounded-full hover:bg-orange-900 transition"
+                  >
                     <LogOut className="w-4 h-4" />
                   </button>
                 </div>

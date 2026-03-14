@@ -25,9 +25,9 @@ export default function CheckoutPage() {
   const { items, totalPrice, clearCart } = useCart();
   const { data: session, status } = useSession();
   const router = useRouter();
+  const [isMounted, setIsMounted] = useState(false);
   const [step, setStep] = useState(1);
   const [paymentMethod, setPaymentMethod] = useState("");
-  const [isMounted, setIsMounted] = useState(false);
   const [loading, setLoading] = useState(false);
   const [paymentSettings, setPaymentSettings] = useState<PaymentSettings>({
     gcash_number: "0938 585 9744",
@@ -55,18 +55,6 @@ export default function CheckoutPage() {
 
   // Fetch payment settings
   useEffect(() => {
-    const fetchPaymentSettings = async () => {
-      try {
-        const response = await fetch("/api/admin/payment-settings");
-        if (response.ok) {
-          const data = await response.json();
-          setPaymentSettings(data);
-        }
-      } catch (error) {
-        console.error("Error fetching payment settings:", error);
-      }
-    };
-    
     if (isMounted) {
       fetchPaymentSettings();
     }
@@ -79,7 +67,19 @@ export default function CheckoutPage() {
     }
   }, [isMounted, items.length, router]);
 
-  // Don't render anything until after mounting
+  const fetchPaymentSettings = async () => {
+    try {
+      const response = await fetch("/api/admin/payment-settings");
+      if (response.ok) {
+        const data = await response.json();
+        setPaymentSettings(data);
+      }
+    } catch (error) {
+      console.error("Error fetching payment settings:", error);
+    }
+  };
+
+  // Don't render anything until mounted
   if (!isMounted) {
     return null;
   }
@@ -176,7 +176,7 @@ export default function CheckoutPage() {
   const today = new Date().toISOString().split('T')[0];
 
   if (items.length === 0) {
-    return null; // Will redirect via useEffect
+    return null;
   }
 
   return (
@@ -340,11 +340,11 @@ export default function CheckoutPage() {
                   onClick={() => setPaymentMethod("cash")}
                   className={`p-4 border rounded-lg text-center hover:bg-orange-50 transition ${
                     paymentMethod === "cash" ? "border-orange-600 bg-orange-50 ring-2 ring-orange-600 ring-opacity-50" : "border-gray-200"
-                  }`}
-                >
-                  <CreditCard className="w-8 h-8 mx-auto mb-2 text-orange-600" />
-                  <span className="font-medium">Cash on Delivery</span>
-                </button>
+                }`}
+              >
+                <CreditCard className="w-8 h-8 mx-auto mb-2 text-orange-600" />
+                <span className="font-medium">Cash on Delivery</span>
+              </button>
               )}
             </div>
 

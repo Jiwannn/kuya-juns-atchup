@@ -1,9 +1,8 @@
 "use client";
 
 import { useCart } from "@/context/CartContext";
-import { ShoppingCart, Image as ImageIcon } from "lucide-react";
+import { ShoppingCart, Star } from "lucide-react";
 import { useState } from "react";
-import Image from "next/image";
 
 interface Product {
   id: number;
@@ -17,21 +16,22 @@ interface Product {
 
 interface ProductCardProps {
   product: Product;
+  averageRating?: number;
+  reviewCount?: number;
 }
 
-export default function ProductCard({ product }: ProductCardProps) {
+export default function ProductCard({ product, averageRating = 0, reviewCount = 0 }: ProductCardProps) {
   const { addItem } = useCart();
   const [isAdding, setIsAdding] = useState(false);
   const [imageError, setImageError] = useState(false);
   const [imageLoading, setImageLoading] = useState(true);
 
-  // Helper function to format price safely
+  console.log(`Product ${product.id} - Rating: ${averageRating}, Count: ${reviewCount}`); // Debug log
+
   const formatPrice = (price: number | string | undefined): string => {
     if (price === undefined || price === null) return "0.00";
-    
     const numPrice = typeof price === 'number' ? price : parseFloat(price as string);
     if (isNaN(numPrice)) return "0.00";
-    
     return numPrice.toFixed(2);
   };
 
@@ -44,13 +44,11 @@ export default function ProductCard({ product }: ProductCardProps) {
       quantity: 1,
       image: product.image_url
     });
-    
     setTimeout(() => {
       setIsAdding(false);
     }, 1000);
   };
 
-  // Get image source with fallback
   const getImageSource = () => {
     if (imageError || !product.image_url) {
       return null;
@@ -61,8 +59,8 @@ export default function ProductCard({ product }: ProductCardProps) {
   const imageSource = getImageSource();
 
   return (
-    <div className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition group h-full flex flex-col" id={`product-${product.id}`}>
-      {/* Image Container - Fixed aspect ratio */}
+    <div className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition group h-full flex flex-col">
+      {/* Image Container */}
       <div className="relative w-full pt-[75%] bg-gradient-to-br from-orange-100 to-amber-100 overflow-hidden">
         {imageLoading && (
           <div className="absolute inset-0 flex items-center justify-center bg-orange-50">
@@ -71,7 +69,6 @@ export default function ProductCard({ product }: ProductCardProps) {
         )}
         
         {imageSource ? (
-          // eslint-disable-next-line @next/next/no-img-element
           <img
             src={imageSource}
             alt={product.name}
@@ -85,9 +82,8 @@ export default function ProductCard({ product }: ProductCardProps) {
             }}
           />
         ) : (
-          <div className="absolute inset-0 flex flex-col items-center justify-center p-4">
-            <ImageIcon className="w-12 h-12 text-orange-300 mb-2" />
-            <span className="text-sm text-orange-400 text-center">{product.category}</span>
+          <div className="absolute inset-0 flex items-center justify-center bg-orange-100">
+            <span className="text-orange-400 font-medium">{product.category}</span>
           </div>
         )}
         
@@ -101,8 +97,31 @@ export default function ProductCard({ product }: ProductCardProps) {
 
       {/* Content Container */}
       <div className="p-4 flex-1 flex flex-col">
+        {/* Rating Stars - ALWAYS VISIBLE if there are reviews */}
+        {reviewCount > 0 ? (
+          <div className="flex items-center gap-2 mb-2">
+            <div className="flex items-center">
+              {[1, 2, 3, 4, 5].map((star) => (
+                <Star
+                  key={star}
+                  className={`w-4 h-4 ${
+                    star <= Math.round(averageRating)
+                      ? 'fill-yellow-400 text-yellow-400'
+                      : 'text-gray-300'
+                  }`}
+                />
+              ))}
+            </div>
+            <span className="text-xs text-gray-500">
+              {averageRating.toFixed(1)} ({reviewCount} {reviewCount === 1 ? 'review' : 'reviews'})
+            </span>
+          </div>
+        ) : (
+          <div className="text-xs text-gray-400 mb-2">No reviews yet</div>
+        )}
+
         {/* Category Tag */}
-        <div className="flex justify-between items-start mb-2">
+        <div className="mb-2">
           <span className="text-xs px-2 py-1 bg-orange-100 text-orange-700 rounded-full">
             {product.category}
           </span>

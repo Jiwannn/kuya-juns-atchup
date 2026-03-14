@@ -4,6 +4,8 @@ import { useState, useEffect } from "react";
 import { useCart } from "@/context/CartContext";
 import { Search, Filter, X } from "lucide-react";
 import ProductCard from "@/components/ProductCard";
+import ReviewModal from "@/components/ReviewModal";
+import ReviewCard from "@/components/ReviewCard";
 
 interface Product {
   id: number;
@@ -15,6 +17,18 @@ interface Product {
   is_available: boolean;
 }
 
+interface Review {
+  id: number;
+  user_name: string;
+  rating: number;
+  review: string;
+  created_at: string;
+}
+
+interface ProductReviews {
+  [key: number]: Review[];
+}
+
 export default function MenuPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
@@ -23,9 +37,17 @@ export default function MenuPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [categories, setCategories] = useState<string[]>([]);
+  
+  // Review states
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [showReviewModal, setShowReviewModal] = useState(false);
+  const [showReviews, setShowReviews] = useState<number | null>(null);
+  const [productReviews, setProductReviews] = useState<ProductReviews>({});
+  const [averageRatings, setAverageRatings] = useState<Record<number, { average: number; count: number }>>({});
 
   useEffect(() => {
     fetchProducts();
+    fetchAllReviews();
   }, []);
 
   useEffect(() => {
@@ -67,6 +89,60 @@ export default function MenuPage() {
       setFilteredProducts([]);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchAllReviews = async () => {
+    try {
+      console.log("📡 Fetching all reviews...");
+      const response = await fetch("/api/reviews");
+      const data = await response.json();
+      console.log("📦 Reviews API response:", data);
+      
+      if (response.ok) {
+        // Group reviews by product
+        const reviewsByProduct: ProductReviews = {};
+        if (data.reviews && Array.isArray(data.reviews)) {
+          data.reviews.forEach((review: any) => {
+            if (!reviewsByProduct[review.product_id]) {
+              reviewsByProduct[review.product_id] = [];
+            }
+            reviewsByProduct[review.product_id].push(review);
+          });
+        }
+        setProductReviews(reviewsByProduct);
+
+        // Store average ratings
+        const ratings: Record<number, { average: number; count: number }> = {};
+        if (data.averageRatings && Array.isArray(data.averageRatings)) {
+          data.averageRatings.forEach((item: any) => {
+            ratings[item.product_id] = {
+              average: parseFloat(item.average_rating) || 0,
+              count: parseInt(item.total_reviews) || 0
+            };
+          });
+        }
+        setAverageRatings(ratings);
+        console.log("✅ Average ratings set:", ratings);
+      }
+    } catch (error) {
+      console.error("❌ Error fetching reviews:", error);
+    }
+  };
+
+  const fetchProductReviews = async (productId: number) => {
+    try {
+      const response = await fetch(`/api/reviews?productId=${productId}`);
+      if (response.ok) {
+        const data = await response.json();
+        setProductReviews(prev => ({
+          ...prev,
+          [productId]: data.reviews
+        }));
+        setShowReviews(productId);
+      }
+    } catch (error) {
+      console.error("Error fetching reviews:", error);
     }
   };
 
@@ -254,11 +330,82 @@ export default function MenuPage() {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {filteredProducts.map((product) => (
-              <ProductCard key={product.id} product={product} />
+              <div key={product.id} className="flex flex-col h-full">
+                {/* Product Card - Fixed height */}
+                <div className="relative h-full">
+                  <ProductCard 
+                    product={product}
+                    averageRating={averageRatings[product.id]?.average}
+                    reviewCount={averageRatings[product.id]?.count}
+                  />
+                </div>
+                
+                {/* Review Actions - Below card */}
+                <div className="mt-2 flex justify-between items-center px-1">
+                  <button
+                    onClick={() => {
+                      setSelectedProduct(product);
+                      setShowReviewModal(true);
+                    }}
+                    className="text-xs text-orange-600 hover:text-orange-700 font-medium"
+                  >
+                    Write a Review
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (showReviews === product.id) {
+                        setShowReviews(null);
+                      } else {
+                        fetchProductReviews(product.id);
+                      }
+                    }}
+                    className="text-xs text-gray-500 hover:text-gray-700 font-medium"
+                  >
+                    {showReviews === product.id ? 'Hide Reviews' : 'View Reviews'}
+                  </button>
+                </div>
+
+                {/* Reviews List - Separate container */}
+                {showReviews === product.id && productReviews[product.id] && (
+                  <div className="mt-3 border rounded-lg p-3 bg-gray-50">
+                    <h4 className="text-sm font-semibold text-gray-700 mb-2">Customer Reviews</h4>
+                    <div className="max-h-60 overflow-y-auto space-y-2 pr-1">
+                      {productReviews[product.id].length > 0 ? (
+                        productReviews[product.id].map((review) => (
+                          <ReviewCard key={review.id} review={review} />
+                        ))
+                      ) : (
+                        <p className="text-xs text-gray-400 text-center py-2">
+                          No reviews yet. Be the first to review!
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
             ))}
           </div>
         )}
       </div>
+
+      {/* Review Modal */}
+      {selectedProduct && (
+        <ReviewModal
+          isOpen={showReviewModal}
+          onClose={() => {
+            setShowReviewModal(false);
+            setSelectedProduct(null);
+          }}
+          productId={selectedProduct.id}
+          productName={selectedProduct.name}
+          onSubmit={() => {
+            fetchAllReviews();
+            if (showReviews === selectedProduct.id) {
+              fetchProductReviews(selectedProduct.id);
+            }
+          }}
+        />
+      )}
     </div>
   );
 }
