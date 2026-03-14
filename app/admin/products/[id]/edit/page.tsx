@@ -1,15 +1,29 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
+import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
-import { Upload, Image as ImageIcon, X, Camera } from "lucide-react";
+import { Upload, Image as ImageIcon, X, Save } from "lucide-react";
 
-export default function NewProduct() {
+interface Product {
+  id: number;
+  name: string;
+  description: string;
+  price: number;
+  category: string;
+  image_url: string;
+  is_available: boolean;
+}
+
+export default function EditProduct() {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const [loading, setLoading] = useState(false);
+  const params = useParams();
+  const productId = params.id as string;
+
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -21,83 +35,57 @@ export default function NewProduct() {
     is_available: true
   });
 
-  // Check authentication and admin role
-  if (status === "loading") {
-    return (
-      <div className="min-h-screen bg-orange-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-16 h-16 border-4 border-orange-200 border-t-orange-600 rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading...</p>
-        </div>
-      </div>
-    );
-  }
+  useEffect(() => {
+    if (status === "loading") return;
 
-  if (!session || session.user?.role !== 'admin') {
-    router.push("/auth/signin");
-    return null;
-  }
+    if (!session) {
+      router.push("/auth/signin");
+      return;
+    }
 
-  // Compress image before uploading
-  const compressImage = (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.readAsDataURL(file);
-      reader.onload = (event) => {
-        const img = new Image();
-        img.src = event.target?.result as string;
-        img.onload = () => {
-          // Create canvas for resizing
-          const canvas = document.createElement('canvas');
-          let width = img.width;
-          let height = img.height;
-          
-          // Max dimensions for product images
-          const MAX_WIDTH = 800;
-          const MAX_HEIGHT = 800;
-          
-          // Calculate new dimensions while maintaining aspect ratio
-          if (width > height) {
-            if (width > MAX_WIDTH) {
-              height *= MAX_WIDTH / width;
-              width = MAX_WIDTH;
-            }
-          } else {
-            if (height > MAX_HEIGHT) {
-              width *= MAX_HEIGHT / height;
-              height = MAX_HEIGHT;
-            }
-          }
-          
-          canvas.width = width;
-          canvas.height = height;
-          
-          // Draw resized image
-          const ctx = canvas.getContext('2d');
-          ctx?.drawImage(img, 0, 0, width, height);
-          
-          // Convert to compressed JPEG (0.8 quality = 80%)
-          const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.8);
-          resolve(compressedDataUrl);
-        };
-        img.onerror = reject;
-      };
-      reader.onerror = reject;
-    });
+    if (session?.user?.role !== 'admin') {
+      router.push("/");
+      return;
+    }
+
+    fetchProduct();
+  }, [session, status, router, productId]);
+
+  const fetchProduct = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch(`/api/products/${productId}`);
+      
+      if (!response.ok) {
+        throw new Error("Failed to fetch product");
+      }
+      
+      const product: Product = await response.json();
+      
+      setFormData({
+        name: product.name || "",
+        description: product.description || "",
+        price: product.price.toString(),
+        category: product.category || "Packed Meals",
+        is_available: product.is_available
+      });
+
+      if (product.image_url) {
+        setImagePreview(product.image_url);
+      }
+    } catch (error) {
+      console.error("Error fetching product:", error);
+      alert("Failed to load product");
+      router.push("/admin/products");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      // Check file size (max 10MB)
-      if (file.size > 10 * 1024 * 1024) {
-        alert("File too large. Please select an image under 10MB.");
-        return;
-      }
-      
       setImageFile(file);
-      
-      // Show preview immediately
       const reader = new FileReader();
       reader.onloadend = () => {
         setImagePreview(reader.result as string);
@@ -106,47 +94,46 @@ export default function NewProduct() {
     }
   };
 
-  const handleCameraCapture = () => {
-    // This will open camera on mobile devices
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = 'image/*';
-    input.capture = 'environment'; // Use rear camera
-    input.onchange = (e) => handleImageChange(e as any);
-    input.click();
-  };
-
   const removeImage = () => {
     setImageFile(null);
     setImagePreview(null);
   };
 
+  const uploadImage = async (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        resolve(reader.result as string);
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
+    setSaving(true);
 
     try {
       // Validate form
       if (!formData.name || !formData.price) {
         alert("Please fill in all required fields");
-        setLoading(false);
+        setSaving(false);
         return;
       }
 
-      let imageUrl = "";
+      let imageUrl = imagePreview || "";
       
-      // Compress and upload image if selected
+      // Upload new image if selected
       if (imageFile) {
         setUploading(true);
         try {
-          // Compress the image
-          imageUrl = await compressImage(imageFile);
-          console.log("Image compressed successfully");
+          imageUrl = await uploadImage(imageFile);
         } catch (error) {
-          console.error("Error compressing image:", error);
+          console.error("Error processing image:", error);
           alert("Error processing image. Please try again.");
           setUploading(false);
-          setLoading(false);
+          setSaving(false);
           return;
         }
         setUploading(false);
@@ -162,11 +149,11 @@ export default function NewProduct() {
         is_available: formData.is_available
       };
 
-      console.log("Submitting product:", productData);
+      console.log("Updating product:", productData);
 
       // Send to API
-      const response = await fetch("/api/products", {
-        method: "POST",
+      const response = await fetch(`/api/products/${productId}`, {
+        method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(productData)
       });
@@ -174,19 +161,30 @@ export default function NewProduct() {
       const result = await response.json();
       
       if (response.ok) {
-        alert("Product created successfully!");
+        alert("Product updated successfully!");
         router.push("/admin/products");
       } else {
-        console.error("Failed to create product:", result);
-        alert(result.error || "Failed to create product");
+        console.error("Failed to update product:", result);
+        alert(result.error || "Failed to update product");
       }
     } catch (error) {
-      console.error("Error creating product:", error);
-      alert("Error creating product. Please try again.");
+      console.error("Error updating product:", error);
+      alert("Error updating product. Please try again.");
     } finally {
-      setLoading(false);
+      setSaving(false);
     }
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-orange-50 to-amber-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-orange-200 border-t-orange-600 rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading product...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 to-amber-50 p-6">
@@ -195,7 +193,7 @@ export default function NewProduct() {
           <Link href="/admin/products" className="text-orange-600 hover:text-orange-700 font-medium flex items-center gap-1">
             ← Back to Products
           </Link>
-          <h1 className="text-3xl font-bold text-orange-800">Add New Product</h1>
+          <h1 className="text-3xl font-bold text-orange-800">Edit Product</h1>
         </div>
 
         <div className="bg-white rounded-2xl shadow-xl p-8">
@@ -204,7 +202,7 @@ export default function NewProduct() {
             <div className="border-2 border-dashed border-orange-200 rounded-xl p-6">
               <div className="flex flex-col items-center justify-center">
                 {imagePreview ? (
-                  <div className="relative w-64 h-64 mb-4">
+                  <div className="relative w-48 h-48 mb-4">
                     <img 
                       src={imagePreview} 
                       alt="Preview" 
@@ -213,53 +211,36 @@ export default function NewProduct() {
                     <button
                       type="button"
                       onClick={removeImage}
-                      className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-8 h-8 flex items-center justify-center hover:bg-red-600 transition shadow-lg"
+                      className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center hover:bg-red-600 transition"
                     >
                       <X className="w-4 h-4" />
                     </button>
                   </div>
                 ) : (
-                  <div className="w-32 h-32 bg-orange-100 rounded-full flex items-center justify-center mb-4">
-                    <Camera className="w-12 h-12 text-orange-400" />
+                  <div className="w-24 h-24 bg-orange-100 rounded-full flex items-center justify-center mb-4">
+                    <ImageIcon className="w-12 h-12 text-orange-400" />
                   </div>
                 )}
                 
-                <p className="text-sm text-gray-600 mb-4 text-center">
-                  Take a photo or upload an image of your delicious dish
-                </p>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Product Image
+                </label>
                 
-                <div className="flex gap-3">
-                  {/* Camera button for mobile */}
-                  <button
-                    type="button"
-                    onClick={handleCameraCapture}
-                    className="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition flex items-center gap-2"
-                  >
-                    <Camera className="w-5 h-5" />
-                    Take Photo
-                  </button>
-                  
-                  {/* File upload button */}
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleImageChange}
-                    className="hidden"
-                    id="image-upload"
-                  />
-                  
-                  <label
-                    htmlFor="image-upload"
-                    className="cursor-pointer bg-orange-600 text-white px-6 py-3 rounded-lg hover:bg-orange-700 transition flex items-center gap-2"
-                  >
-                    <Upload className="w-5 h-5" />
-                    Upload Image
-                  </label>
-                </div>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageChange}
+                  className="hidden"
+                  id="image-upload"
+                />
                 
-                <p className="text-xs text-gray-500 mt-4">
-                  Images will be automatically optimized for fast loading • Max size: 10MB
-                </p>
+                <label
+                  htmlFor="image-upload"
+                  className="cursor-pointer bg-orange-100 text-orange-700 px-4 py-2 rounded-lg hover:bg-orange-200 transition flex items-center gap-2"
+                >
+                  <Upload className="w-4 h-4" />
+                  {imagePreview ? "Change Image" : "Upload Image"}
+                </label>
               </div>
             </div>
 
@@ -325,7 +306,6 @@ export default function NewProduct() {
                 <option value="Food Trays">Food Trays</option>
                 <option value="Catering">Catering</option>
                 <option value="Beverages">Beverages</option>
-                <option value="Desserts">Desserts</option>
               </select>
             </div>
 
@@ -345,18 +325,18 @@ export default function NewProduct() {
             <div className="flex gap-4 pt-4">
               <button
                 type="submit"
-                disabled={loading || uploading}
+                disabled={saving || uploading}
                 className="flex-1 bg-gradient-to-r from-orange-600 to-orange-500 text-white py-3 rounded-lg font-semibold hover:from-orange-700 hover:to-orange-600 transition disabled:opacity-50 flex items-center justify-center gap-2"
               >
-                {loading || uploading ? (
+                {saving || uploading ? (
                   <>
                     <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                    {uploading ? "Optimizing Image..." : "Creating Product..."}
+                    {uploading ? "Uploading Image..." : "Saving Changes..."}
                   </>
                 ) : (
                   <>
-                    <Upload className="w-5 h-5" />
-                    Create Product
+                    <Save className="w-5 h-5" />
+                    Save Changes
                   </>
                 )}
               </button>
@@ -391,9 +371,11 @@ export default function NewProduct() {
                     <span className="text-xl font-bold text-orange-600">
                       ₱{parseFloat(formData.price || "0").toFixed(2)}
                     </span>
-                    <button className="bg-orange-600 text-white px-4 py-2 rounded-lg text-sm font-semibold opacity-50 cursor-not-allowed">
-                      Add to Cart
-                    </button>
+                    <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                      formData.is_available ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'
+                    }`}>
+                      {formData.is_available ? "Available" : "Unavailable"}
+                    </span>
                   </div>
                 </div>
               </div>

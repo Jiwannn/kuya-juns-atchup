@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import sql from "@/lib/db/neon";
+import sql from "@/lib/db/neon";  // Changed from { sql } to sql
 
 export async function GET() {
   try {
@@ -7,12 +7,12 @@ export async function GET() {
       SELECT * FROM notifications 
       WHERE is_read = false 
       ORDER BY created_at DESC
-      LIMIT 50
+      LIMIT 20
     `;
     return NextResponse.json(notifications);
   } catch (error) {
     console.error("Error fetching notifications:", error);
-    return NextResponse.json({ error: "Failed to fetch notifications" }, { status: 500 });
+    return NextResponse.json([]);
   }
 }
 

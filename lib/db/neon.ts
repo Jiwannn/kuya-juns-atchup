@@ -1,19 +1,19 @@
 import { neon } from '@neondatabase/serverless';
 
-// Create the SQL executor
+// Create SQL executor
 const sqlExecutor = neon(process.env.POSTGRES_URL!);
 
-
-export async function sql(strings: any, ...values: any[]) {
+// For tagged template literals - this is the default export
+export default async function sql(strings: any, ...values: any[]) {
   try {
-    // Execute the query with the template literal
+    // Execute the tagged template query
     const result = await sqlExecutor(strings, ...values);
     return result || [];
   } catch (error) {
-    console.error('Database error:', error);
+    console.error('Database query error:', error);
     throw error;
   }
 }
 
-
-export default sql;
+// Named export for backward compatibility
+export { sql as sqlTag };

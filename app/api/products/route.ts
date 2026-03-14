@@ -3,7 +3,9 @@ import sql from "@/lib/db/neon";
 
 export async function GET() {
   try {
-    const products = await sql`SELECT * FROM products ORDER BY category, name`;
+    const products = await sql`
+      SELECT * FROM products ORDER BY category, name
+    `;
     return NextResponse.json(products || []);
   } catch (error) {
     console.error("Error fetching products:", error);

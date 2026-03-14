@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import * as bcrypt from 'bcryptjs';
-import { sql } from "@/lib/db/neon";
+import sql from "@/lib/db/neon";
 
 export async function POST(request: Request) {
   try {
@@ -24,8 +24,8 @@ export async function POST(request: Request) {
 
     // Create user
     await sql`
-      INSERT INTO users (name, email, password, provider)
-      VALUES (${name}, ${email}, ${hashedPassword}, 'credentials')
+      INSERT INTO users (name, email, password, provider, role, created_at, updated_at)
+      VALUES (${name}, ${email}, ${hashedPassword}, 'credentials', 'customer', NOW(), NOW())
     `;
 
     return NextResponse.json({ success: true });

@@ -16,17 +16,9 @@ import {
   MapPin,
   Clock,
   Award,
-  Star,
   Heart,
   TrendingUp,
   Package,
-  Coffee,
-  Pizza,
-  Settings,
-  LogOut,
-  Bell,
-  Search,
-  Filter,
   ChevronRight,
   Send
 } from "lucide-react";
@@ -55,9 +47,20 @@ interface Stats {
   pendingOrders: number;
 }
 
+interface ContactSettings {
+  phone: string;
+  email: string;
+  address: string;
+  business_hours: string;
+  facebook?: string;
+  instagram?: string;
+  twitter?: string;
+}
+
 export default function HomePage() {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const [mounted, setMounted] = useState(false);
   const [greeting, setGreeting] = useState("");
   const [recentOrders, setRecentOrders] = useState<Order[]>([]);
   const [popularProducts, setPopularProducts] = useState<Product[]>([]);
@@ -67,6 +70,15 @@ export default function HomePage() {
     totalCustomers: 0,
     averageRating: 0,
     pendingOrders: 0
+  });
+  const [contactSettings, setContactSettings] = useState<ContactSettings>({
+    phone: "0938 585 9744",
+    email: "febiemosura983@gmail.com",
+    address: "Available on FoodPanda & GrabFood",
+    business_hours: "Monday - Sunday, 9:00 AM - 9:00 PM",
+    facebook: "#",
+    instagram: "#",
+    twitter: "#"
   });
   const [loading, setLoading] = useState(true);
   
@@ -82,8 +94,15 @@ export default function HomePage() {
   const [contactLoading, setContactLoading] = useState(false);
 
   useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!mounted) return;
+
     if (status === "unauthenticated") {
       router.push("/auth/signin");
+      return;
     }
 
     const hour = new Date().getHours();
@@ -93,8 +112,30 @@ export default function HomePage() {
 
     if (session) {
       fetchDashboardData();
+      fetchContactSettings();
     }
-  }, [status, router, session]);
+  }, [status, router, session, mounted]);
+
+  const fetchContactSettings = async () => {
+    try {
+      const response = await fetch('/api/admin/contact-settings');
+      if (response.ok) {
+        const data = await response.json();
+        setContactSettings({
+          phone: data.phone || "0938 585 9744",
+          email: data.email || "febiemosura983@gmail.com",
+          address: data.address || "Available on FoodPanda & GrabFood",
+          business_hours: data.business_hours || "Monday - Sunday, 9:00 AM - 9:00 PM",
+          facebook: data.facebook || "#",
+          instagram: data.instagram || "#",
+          twitter: data.twitter || "#"
+        });
+        console.log("Contact settings loaded:", data);
+      }
+    } catch (error) {
+      console.error("Error fetching contact settings:", error);
+    }
+  };
 
   const fetchDashboardData = async () => {
     try {
@@ -122,7 +163,7 @@ export default function HomePage() {
         console.error('Error fetching products:', error);
       }
 
-      // Fetch stats if user is admin (based on role)
+      // Fetch stats if user is admin
       if (session?.user?.role === 'admin') {
         try {
           const statsRes = await fetch('/api/admin/stats');
@@ -176,18 +217,23 @@ export default function HomePage() {
     }
   };
 
-  if (status === "loading" || loading) {
+  // Helper function to format currency
+  const formatCurrency = (amount: number | string | undefined): string => {
+    if (amount === undefined || amount === null) return '₱0.00';
+    const numAmount = typeof amount === 'number' ? amount : parseFloat(amount as string);
+    if (isNaN(numAmount)) return '₱0.00';
+    return `₱${numAmount.toFixed(2)}`;
+  };
+
+  // Don't render anything until mounted
+  if (!mounted || status === "loading" || loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-orange-50 via-amber-50 to-orange-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-orange-50 to-amber-50 flex items-center justify-center">
         <div className="text-center">
           <div className="relative">
-            <div className="w-24 h-24 border-4 border-orange-200 border-t-orange-600 rounded-full animate-spin mx-auto mb-6"></div>
-            <div className="absolute inset-0 flex items-center justify-center">
-              <UtensilsCrossed className="w-8 h-8 text-orange-600 animate-pulse" />
-            </div>
+            <div className="w-16 h-16 border-4 border-orange-200 border-t-orange-600 rounded-full animate-spin mx-auto mb-4"></div>
           </div>
-          <p className="text-gray-600 text-lg font-medium">Loading your dashboard...</p>
-          <p className="text-gray-400 text-sm mt-2">Kuya Jun's Atchup Sabaw</p>
+          <p className="text-gray-600">Loading...</p>
         </div>
       </div>
     );
@@ -202,45 +248,7 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 via-amber-50 to-orange-50">
-      {/* Top Navigation Bar */}
-      <div className="bg-white/80 backdrop-blur-lg border-b border-orange-100 sticky top-0 z-30">
-        <div className="container mx-auto px-4">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-orange-600 to-orange-500 rounded-xl flex items-center justify-center shadow-lg">
-                <UtensilsCrossed className="w-5 h-5 text-white" />
-              </div>
-              <span className="font-bold text-gray-800">Kuya Jun's</span>
-            </div>
-            
-            <div className="flex items-center gap-4">
-              <button className="relative p-2 text-gray-600 hover:text-orange-600 hover:bg-orange-50 rounded-lg transition">
-                <Bell className="w-5 h-5" />
-                {stats.pendingOrders > 0 && (
-                  <span className="absolute top-1 right-1 w-4 h-4 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
-                    {stats.pendingOrders}
-                  </span>
-                )}
-              </button>
-              <div className="flex items-center gap-3 pl-3 border-l border-orange-100">
-                <div className="text-right">
-                  <p className="text-sm font-medium text-gray-800">{session.user?.name}</p>
-                  <p className="text-xs text-gray-500">
-                    {isAdmin ? 'Owner' : 'Customer'}
-                  </p>
-                </div>
-                <div className="w-10 h-10 bg-gradient-to-br from-orange-100 to-amber-100 rounded-xl flex items-center justify-center">
-                  <span className="text-orange-600 font-bold text-lg">
-                    {session.user?.name?.charAt(0) || 'U'}
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Main Content */}
+      {/* Main Content - NO NAVBAR HERE! The navbar comes from components/Navbar.tsx */}
       <div className="container mx-auto px-4 py-8">
         {/* Welcome Section */}
         <div className="mb-8">
@@ -266,17 +274,6 @@ export default function HomePage() {
                     ? "Your restaurant is doing great! Here's what's happening today."
                     : "Ready to satisfy your cravings? Check out our delicious menu."}
                 </p>
-                
-                <div className="flex flex-wrap gap-6 mt-8">
-                  <div className="bg-white/20 backdrop-blur-sm rounded-xl px-4 py-2">
-                    <p className="text-orange-100 text-sm">Member since</p>
-                    <p className="text-white font-semibold">2024</p>
-                  </div>
-                  <div className="bg-white/20 backdrop-blur-sm rounded-xl px-4 py-2">
-                    <p className="text-orange-100 text-sm">Orders</p>
-                    <p className="text-white font-semibold">{recentOrders.length}</p>
-                  </div>
-                </div>
               </div>
             </div>
           </div>
@@ -290,14 +287,11 @@ export default function HomePage() {
                 <div className="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center">
                   <TrendingUp className="w-6 h-6 text-orange-600" />
                 </div>
-                <span className="text-green-500 text-sm font-semibold">
-                  {(stats?.totalRevenue || 0) > 0 ? '+12%' : '0%'}
-                </span>
               </div>
               <p className="text-2xl font-bold text-gray-800">
-                ₱{(stats?.totalRevenue || 0).toLocaleString()}
+                {formatCurrency(stats.totalRevenue)}
               </p>
-              <p className="text-sm text-gray-500">Today's Revenue</p>
+              <p className="text-sm text-gray-500">Total Revenue</p>
             </div>
 
             <div className="bg-white rounded-2xl shadow-lg p-6 hover:shadow-xl transition border border-orange-100">
@@ -305,11 +299,8 @@ export default function HomePage() {
                 <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
                   <Package className="w-6 h-6 text-blue-600" />
                 </div>
-                <span className="text-green-500 text-sm font-semibold">
-                  {(stats?.totalOrders || 0) > 0 ? '+5%' : '0%'}
-                </span>
               </div>
-              <p className="text-2xl font-bold text-gray-800">{stats?.totalOrders || 0}</p>
+              <p className="text-2xl font-bold text-gray-800">{stats.totalOrders}</p>
               <p className="text-sm text-gray-500">Total Orders</p>
             </div>
 
@@ -318,11 +309,8 @@ export default function HomePage() {
                 <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center">
                   <Users className="w-6 h-6 text-purple-600" />
                 </div>
-                <span className="text-green-500 text-sm font-semibold">
-                  {(stats?.totalCustomers || 0) > 0 ? '+8%' : '0%'}
-                </span>
               </div>
-              <p className="text-2xl font-bold text-gray-800">{stats?.totalCustomers || 0}</p>
+              <p className="text-2xl font-bold text-gray-800">{stats.totalCustomers}</p>
               <p className="text-sm text-gray-500">Total Customers</p>
             </div>
 
@@ -331,33 +319,23 @@ export default function HomePage() {
                 <div className="w-12 h-12 bg-amber-100 rounded-xl flex items-center justify-center">
                   <Award className="w-6 h-6 text-amber-600" />
                 </div>
-                <span className="text-green-500 text-sm font-semibold">
-                  {(stats?.averageRating || 0) > 0 ? (stats.averageRating || 0).toFixed(1) : '0'}
-                </span>
               </div>
               <p className="text-2xl font-bold text-gray-800">
-                {(stats?.averageRating || 0) > 0 ? '⭐'.repeat(Math.floor(stats.averageRating || 0)) : 'No ratings'}
+                {stats.pendingOrders} Pending
               </p>
-              <p className="text-sm text-gray-500">Average Rating</p>
+              <p className="text-sm text-gray-500">Pending Orders</p>
             </div>
           </div>
         )}
 
         {/* Quick Actions */}
         <div className="mb-8">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-bold text-gray-800">Quick Actions</h2>
-            <Link href="/menu" className="text-orange-600 hover:text-orange-700 font-medium flex items-center gap-1">
-              View All <ChevronRight className="w-4 h-4" />
-            </Link>
-          </div>
-          
+          <h2 className="text-2xl font-bold text-gray-800 mb-6">Quick Actions</h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <Link 
               href="/menu" 
               className="group relative bg-white rounded-2xl shadow-lg p-6 hover:shadow-xl transition-all duration-300 hover:-translate-y-1 border border-orange-100 overflow-hidden"
             >
-              <div className="absolute top-0 right-0 w-20 h-20 bg-orange-50 rounded-bl-3xl -mr-8 -mt-8 group-hover:bg-orange-100 transition"></div>
               <div className="relative">
                 <div className="w-14 h-14 bg-gradient-to-br from-orange-100 to-amber-100 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition">
                   <ShoppingBag className="w-7 h-7 text-orange-600" />
@@ -371,7 +349,6 @@ export default function HomePage() {
               href="/catering" 
               className="group relative bg-white rounded-2xl shadow-lg p-6 hover:shadow-xl transition-all duration-300 hover:-translate-y-1 border border-orange-100 overflow-hidden"
             >
-              <div className="absolute top-0 right-0 w-20 h-20 bg-orange-50 rounded-bl-3xl -mr-8 -mt-8 group-hover:bg-orange-100 transition"></div>
               <div className="relative">
                 <div className="w-14 h-14 bg-gradient-to-br from-orange-100 to-amber-100 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition">
                   <Calendar className="w-7 h-7 text-orange-600" />
@@ -385,7 +362,6 @@ export default function HomePage() {
               href="/about" 
               className="group relative bg-white rounded-2xl shadow-lg p-6 hover:shadow-xl transition-all duration-300 hover:-translate-y-1 border border-orange-100 overflow-hidden"
             >
-              <div className="absolute top-0 right-0 w-20 h-20 bg-orange-50 rounded-bl-3xl -mr-8 -mt-8 group-hover:bg-orange-100 transition"></div>
               <div className="relative">
                 <div className="w-14 h-14 bg-gradient-to-br from-orange-100 to-amber-100 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition">
                   <Users className="w-7 h-7 text-orange-600" />
@@ -399,7 +375,6 @@ export default function HomePage() {
               onClick={() => document.getElementById('contact-section')?.scrollIntoView({ behavior: 'smooth' })}
               className="group relative bg-white rounded-2xl shadow-lg p-6 hover:shadow-xl transition-all duration-300 hover:-translate-y-1 border border-orange-100 overflow-hidden cursor-pointer"
             >
-              <div className="absolute top-0 right-0 w-20 h-20 bg-orange-50 rounded-bl-3xl -mr-8 -mt-8 group-hover:bg-orange-100 transition"></div>
               <div className="relative">
                 <div className="w-14 h-14 bg-gradient-to-br from-orange-100 to-amber-100 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition">
                   <MessageSquare className="w-7 h-7 text-orange-600" />
@@ -414,21 +389,15 @@ export default function HomePage() {
         {/* Admin Section - Only for Admin */}
         {isAdmin && (
           <div className="mb-8">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-bold text-gray-800">Admin Controls</h2>
-              <Link href="/admin" className="text-orange-600 hover:text-orange-700 font-medium flex items-center gap-1">
-                Admin Dashboard <ChevronRight className="w-4 h-4" />
-              </Link>
-            </div>
-            
+            <h2 className="text-2xl font-bold text-gray-800 mb-6">Admin Controls</h2>
             <div className="grid md:grid-cols-3 gap-4">
               <Link 
-                href="/admin/products" 
+                href="/admin/products/new" 
                 className="group bg-gradient-to-br from-orange-500 to-orange-600 rounded-2xl shadow-lg p-6 hover:shadow-xl transition-all duration-300 hover:-translate-y-1 text-white"
               >
                 <ChefHat className="w-8 h-8 mb-3 group-hover:scale-110 transition" />
-                <h3 className="text-xl font-bold mb-1">Manage Products</h3>
-                <p className="text-orange-100 text-sm">Add, edit, or remove menu items</p>
+                <h3 className="text-xl font-bold mb-1">Add New Product</h3>
+                <p className="text-orange-100 text-sm">Create a new menu item</p>
               </Link>
 
               <Link 
@@ -452,16 +421,10 @@ export default function HomePage() {
           </div>
         )}
 
-        {/* Popular Items - Real Data */}
+        {/* Popular Items */}
         {popularProducts.length > 0 && (
           <div className="mb-8">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-bold text-gray-800">Popular Today</h2>
-              <Link href="/menu" className="text-orange-600 hover:text-orange-700 font-medium flex items-center gap-1">
-                View Full Menu <ChevronRight className="w-4 h-4" />
-              </Link>
-            </div>
-            
+            <h2 className="text-2xl font-bold text-gray-800 mb-6">Popular Today</h2>
             <div className="grid md:grid-cols-3 gap-4">
               {popularProducts.map((product) => (
                 <div key={product.id} className="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-xl transition group">
@@ -477,7 +440,7 @@ export default function HomePage() {
                   <div className="p-4">
                     <h3 className="font-bold text-gray-800 mb-1">{product.name}</h3>
                     <div className="flex items-center justify-between">
-                      <span className="text-xl font-bold text-orange-600">₱{product.price}</span>
+                      <span className="text-xl font-bold text-orange-600">{formatCurrency(product.price)}</span>
                       <Link 
                         href={`/menu?id=${product.id}`}
                         className="bg-orange-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-orange-700 transition"
@@ -492,7 +455,7 @@ export default function HomePage() {
           </div>
         )}
 
-        {/* Recent Orders - Real Data */}
+        {/* Recent Orders */}
         <div className="bg-white rounded-2xl shadow-lg p-6 mb-8">
           <h2 className="text-xl font-bold text-gray-800 mb-4">Recent Orders</h2>
           {recentOrders.length > 0 ? (
@@ -505,7 +468,7 @@ export default function HomePage() {
                   <div className="flex-1">
                     <p className="font-medium text-gray-800">Order #{order.order_number}</p>
                     <p className="text-sm text-gray-500">
-                      {new Date(order.created_at).toLocaleDateString()} • ₱{order.total_amount}
+                      {new Date(order.created_at).toLocaleDateString()} • {formatCurrency(order.total_amount)}
                     </p>
                   </div>
                   <span className={`px-3 py-1 rounded-full text-xs font-medium ${
@@ -529,11 +492,11 @@ export default function HomePage() {
           )}
         </div>
 
-        {/* Contact Section - At the bottom */}
+        {/* Contact Section - Using settings from database */}
         <div id="contact-section" className="scroll-mt-20">
           <div className="bg-white rounded-3xl shadow-xl overflow-hidden">
             <div className="grid lg:grid-cols-2">
-              {/* Contact Information */}
+              {/* Contact Information - NOW USING DATABASE SETTINGS */}
               <div className="bg-gradient-to-br from-orange-600 to-orange-500 p-8 text-white">
                 <h2 className="text-3xl font-bold mb-6">Get in Touch</h2>
                 <p className="text-orange-100 mb-8">
@@ -547,10 +510,10 @@ export default function HomePage() {
                     </div>
                     <div>
                       <p className="text-sm text-orange-200 mb-1">Call or Text</p>
-                      <a href="tel:09385859744" className="text-xl font-semibold hover:text-orange-200 transition">
-                        0938 585 9744
+                      <a href={`tel:${contactSettings.phone.replace(/\s/g, '')}`} className="text-xl font-semibold hover:text-orange-200 transition">
+                        {contactSettings.phone}
                       </a>
-                      <p className="text-sm text-orange-200 mt-1">Mon-Sun, 9:00 AM - 9:00 PM</p>
+                      <p className="text-sm text-orange-200 mt-1">{contactSettings.business_hours}</p>
                     </div>
                   </div>
 
@@ -560,8 +523,8 @@ export default function HomePage() {
                     </div>
                     <div>
                       <p className="text-sm text-orange-200 mb-1">Email</p>
-                      <a href="mailto:febiemosura983@gmail.com" className="text-xl font-semibold hover:text-orange-200 transition break-all">
-                        febiemosura983@gmail.com
+                      <a href={`mailto:${contactSettings.email}`} className="text-xl font-semibold hover:text-orange-200 transition break-all">
+                        {contactSettings.email}
                       </a>
                       <p className="text-sm text-orange-200 mt-1">We reply within 24 hours</p>
                     </div>
@@ -573,7 +536,7 @@ export default function HomePage() {
                     </div>
                     <div>
                       <p className="text-sm text-orange-200 mb-1">Delivery Partners</p>
-                      <p className="text-xl font-semibold">FoodPanda • GrabFood</p>
+                      <p className="text-xl font-semibold">{contactSettings.address}</p>
                       <p className="text-sm text-orange-200 mt-1">Order through the apps</p>
                     </div>
                   </div>
@@ -584,8 +547,7 @@ export default function HomePage() {
                     </div>
                     <div>
                       <p className="text-sm text-orange-200 mb-1">Business Hours</p>
-                      <p className="text-xl font-semibold">Monday - Sunday</p>
-                      <p className="text-xl font-semibold text-orange-200">9:00 AM - 9:00 PM</p>
+                      <p className="text-xl font-semibold">{contactSettings.business_hours}</p>
                     </div>
                   </div>
                 </div>
@@ -593,15 +555,21 @@ export default function HomePage() {
                 <div className="mt-8 pt-8 border-t border-white/20">
                   <p className="text-sm text-orange-200 mb-3">Follow us on social media</p>
                   <div className="flex gap-3">
-                    <a href="#" className="w-10 h-10 bg-white/20 backdrop-blur-lg rounded-xl flex items-center justify-center hover:bg-white/30 transition">
-                      <span className="font-bold">f</span>
-                    </a>
-                    <a href="#" className="w-10 h-10 bg-white/20 backdrop-blur-lg rounded-xl flex items-center justify-center hover:bg-white/30 transition">
-                      <span className="font-bold">ig</span>
-                    </a>
-                    <a href="#" className="w-10 h-10 bg-white/20 backdrop-blur-lg rounded-xl flex items-center justify-center hover:bg-white/30 transition">
-                      <span className="font-bold">t</span>
-                    </a>
+                    {contactSettings.facebook && contactSettings.facebook !== '#' && (
+                      <a href={contactSettings.facebook} target="_blank" rel="noopener noreferrer" className="w-10 h-10 bg-white/20 backdrop-blur-lg rounded-xl flex items-center justify-center hover:bg-white/30 transition">
+                        <span className="font-bold">f</span>
+                      </a>
+                    )}
+                    {contactSettings.instagram && contactSettings.instagram !== '#' && (
+                      <a href={contactSettings.instagram} target="_blank" rel="noopener noreferrer" className="w-10 h-10 bg-white/20 backdrop-blur-lg rounded-xl flex items-center justify-center hover:bg-white/30 transition">
+                        <span className="font-bold">ig</span>
+                      </a>
+                    )}
+                    {contactSettings.twitter && contactSettings.twitter !== '#' && (
+                      <a href={contactSettings.twitter} target="_blank" rel="noopener noreferrer" className="w-10 h-10 bg-white/20 backdrop-blur-lg rounded-xl flex items-center justify-center hover:bg-white/30 transition">
+                        <span className="font-bold">t</span>
+                      </a>
+                    )}
                   </div>
                 </div>
               </div>
@@ -622,81 +590,44 @@ export default function HomePage() {
                   </div>
                 ) : (
                   <form onSubmit={handleContactSubmit} className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Your Name *</label>
-                      <input
-                        type="text"
-                        value={contactForm.name}
-                        onChange={(e) => setContactForm({...contactForm, name: e.target.value})}
-                        className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500"
-                        placeholder="Enter your name"
-                        required
-                      />
-                    </div>
-                    
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Email Address *</label>
-                      <input
-                        type="email"
-                        value={contactForm.email}
-                        onChange={(e) => setContactForm({...contactForm, email: e.target.value})}
-                        className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500"
-                        placeholder="Enter your email"
-                        required
-                      />
-                    </div>
-                    
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
-                      <input
-                        type="tel"
-                        value={contactForm.phone}
-                        onChange={(e) => setContactForm({...contactForm, phone: e.target.value})}
-                        className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500"
-                        placeholder="Enter your phone number"
-                      />
-                    </div>
-                    
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Subject *</label>
-                      <input
-                        type="text"
-                        value={contactForm.subject}
-                        onChange={(e) => setContactForm({...contactForm, subject: e.target.value})}
-                        className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500"
-                        placeholder="What is this about?"
-                        required
-                      />
-                    </div>
-                    
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Message *</label>
-                      <textarea
-                        value={contactForm.message}
-                        onChange={(e) => setContactForm({...contactForm, message: e.target.value})}
-                        rows={4}
-                        className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500"
-                        placeholder="Type your message here..."
-                        required
-                      ></textarea>
-                    </div>
-                    
+                    <input
+                      type="text"
+                      value={contactForm.name}
+                      onChange={(e) => setContactForm({...contactForm, name: e.target.value})}
+                      placeholder="Your Name"
+                      className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500"
+                      required
+                    />
+                    <input
+                      type="email"
+                      value={contactForm.email}
+                      onChange={(e) => setContactForm({...contactForm, email: e.target.value})}
+                      placeholder="Email Address"
+                      className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500"
+                      required
+                    />
+                    <input
+                      type="text"
+                      value={contactForm.subject}
+                      onChange={(e) => setContactForm({...contactForm, subject: e.target.value})}
+                      placeholder="Subject"
+                      className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500"
+                      required
+                    />
+                    <textarea
+                      value={contactForm.message}
+                      onChange={(e) => setContactForm({...contactForm, message: e.target.value})}
+                      rows={4}
+                      placeholder="Your Message"
+                      className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500"
+                      required
+                    ></textarea>
                     <button
                       type="submit"
                       disabled={contactLoading}
-                      className="w-full bg-gradient-to-r from-orange-600 to-orange-500 text-white py-3 rounded-xl font-semibold hover:from-orange-700 hover:to-orange-600 transition flex items-center justify-center gap-2 disabled:opacity-50"
+                      className="w-full bg-gradient-to-r from-orange-600 to-orange-500 text-white py-3 rounded-xl font-semibold hover:from-orange-700 hover:to-orange-600 transition disabled:opacity-50"
                     >
-                      {contactLoading ? (
-                        <>
-                          <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                          Sending...
-                        </>
-                      ) : (
-                        <>
-                          Send Message
-                          <Send className="w-5 h-5" />
-                        </>
-                      )}
+                      {contactLoading ? "Sending..." : "Send Message"}
                     </button>
                   </form>
                 )}

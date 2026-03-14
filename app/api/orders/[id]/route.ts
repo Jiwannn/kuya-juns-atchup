@@ -1,82 +1,85 @@
 import { NextResponse } from "next/server";
 import sql from "@/lib/db/neon";
 
-export async function POST(request: Request) {
+export async function PATCH(
+  request: Request,
+  { params }: { params: { id: string } }
+) {
   try {
     const body = await request.json();
-    const {
-      fullName,
-      email,
-      phone,
-      address,
-      deliveryDate,
-      deliveryTime,
-      specialInstructions,
-      items,
-      totalAmount,
-      paymentMethod,
-      userId
-    } = body;
+    const { status, payment_status } = body;
 
-    const orderNumber = `ORD-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    console.log(`Updating order ${params.id} with:`, { status, payment_status });
 
-    const orderResult = await sql`
-      INSERT INTO orders (
-        user_id, order_number, total_amount, payment_method, 
-        delivery_address, delivery_date, delivery_time, special_instructions
-      ) VALUES (
-        ${userId || null}, ${orderNumber}, ${totalAmount}, ${paymentMethod},
-        ${address}, ${deliveryDate}, ${deliveryTime}, ${specialInstructions}
-      ) RETURNING id
-    `;
-
-    const orderId = orderResult[0].id;
-
-    for (const item of items) {
+    // Build the update query based on what's provided
+    if (status) {
       await sql`
-        INSERT INTO order_items (order_id, product_id, quantity, price, subtotal)
-        VALUES (${orderId}, ${item.id}, ${item.quantity}, ${item.price}, ${item.price * item.quantity})
+        UPDATE orders 
+        SET status = ${status}, updated_at = NOW()
+        WHERE id = ${params.id}
       `;
+      console.log(`✅ Order ${params.id} status updated to ${status}`);
+    }
+    
+    if (payment_status) {
+      await sql`
+        UPDATE orders 
+        SET payment_status = ${payment_status}, updated_at = NOW()
+        WHERE id = ${params.id}
+      `;
+      console.log(`✅ Order ${params.id} payment status updated to ${payment_status}`);
     }
 
-    await sql`
-      INSERT INTO notifications (type, title, message, reference_id)
-      VALUES (
-        'new_order', 
-        'New Order Received', 
-        ${`Order #${orderNumber} from ${fullName} - ₱${totalAmount}`},
-        ${orderId}
-      )
+    // Verify the update
+    const verify = await sql`
+      SELECT status, payment_status FROM orders WHERE id = ${params.id}
     `;
+    console.log(`📊 Order after update:`, verify[0]);
 
-    return NextResponse.json({ success: true, orderId, orderNumber });
+    return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Error creating order:", error);
-    return NextResponse.json({ error: "Failed to create order" }, { status: 500 });
+    console.error("❌ Error updating order:", error);
+    return NextResponse.json(
+      { error: "Failed to update order" },
+      { status: 500 }
+    );
   }
 }
 
-export async function GET(request: Request) {
+export async function GET(
+  request: Request,
+  { params }: { params: { id: string } }
+) {
   try {
-    const { searchParams } = new URL(request.url);
-    const status = searchParams.get("status");
-
-    let query = `
-      SELECT o.*, u.name as customer_name, u.email as customer_email
+    const orders = await sql`
+      SELECT 
+        o.*,
+        COALESCE(u.name, 'Guest') as customer_name,
+        COALESCE(u.email, 'guest@example.com') as customer_email
       FROM orders o
       LEFT JOIN users u ON o.user_id = u.id
+      WHERE o.id = ${params.id}
     `;
 
-    if (status) {
-      query += ` WHERE o.status = '${status}'`;
+    if (orders.length === 0) {
+      return NextResponse.json({ error: "Order not found" }, { status: 404 });
     }
 
-    query += " ORDER BY o.created_at DESC";
+    const items = await sql`
+      SELECT 
+        oi.*,
+        p.name as product_name
+      FROM order_items oi
+      LEFT JOIN products p ON oi.product_id = p.id
+      WHERE oi.order_id = ${params.id}
+    `;
 
-    const result = await sql(query);
-    return NextResponse.json(result);
+    return NextResponse.json({
+      ...orders[0],
+      items
+    });
   } catch (error) {
-    console.error("Error fetching orders:", error);
-    return NextResponse.json({ error: "Failed to fetch orders" }, { status: 500 });
+    console.error("Error fetching order:", error);
+    return NextResponse.json({ error: "Failed to fetch order" }, { status: 500 });
   }
 }

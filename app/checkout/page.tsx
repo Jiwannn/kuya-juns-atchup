@@ -4,12 +4,22 @@ import { useEffect, useState } from "react";
 import { useCart } from "@/context/CartContext";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { CreditCard, Landmark, Wallet } from "lucide-react";
+import { CreditCard, Landmark, Wallet, ArrowLeft } from "lucide-react";
 import Link from "next/link";
 
-// Completely disable static generation for this page
+// Disable static generation for this page
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
+
+interface PaymentSettings {
+  gcash_number: string;
+  gcash_name: string;
+  bank_name: string;
+  bank_account_name: string;
+  bank_account_number: string;
+  bank_account_type: string;
+  cod_available: boolean;
+}
 
 export default function CheckoutPage() {
   const { items, totalPrice, clearCart } = useCart();
@@ -18,6 +28,16 @@ export default function CheckoutPage() {
   const [step, setStep] = useState(1);
   const [paymentMethod, setPaymentMethod] = useState("");
   const [isMounted, setIsMounted] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [paymentSettings, setPaymentSettings] = useState<PaymentSettings>({
+    gcash_number: "0938 585 9744",
+    gcash_name: "Febie M.",
+    bank_name: "BDO",
+    bank_account_name: "Kuya Jun's Atchup Sabaw",
+    bank_account_number: "1234-5678-9012",
+    bank_account_type: "Savings",
+    cod_available: true
+  });
   const [formData, setFormData] = useState({
     fullName: "",
     email: "",
@@ -32,6 +52,25 @@ export default function CheckoutPage() {
   useEffect(() => {
     setIsMounted(true);
   }, []);
+
+  // Fetch payment settings
+  useEffect(() => {
+    const fetchPaymentSettings = async () => {
+      try {
+        const response = await fetch("/api/admin/payment-settings");
+        if (response.ok) {
+          const data = await response.json();
+          setPaymentSettings(data);
+        }
+      } catch (error) {
+        console.error("Error fetching payment settings:", error);
+      }
+    };
+    
+    if (isMounted) {
+      fetchPaymentSettings();
+    }
+  }, [isMounted]);
 
   // Redirect if cart is empty - only after mounting
   useEffect(() => {
@@ -71,29 +110,70 @@ export default function CheckoutPage() {
   };
 
   const handlePlaceOrder = async () => {
+    setLoading(true);
+    
     try {
+      // Validate form
+      if (!formData.fullName || !formData.email || !formData.phone || !formData.address || !formData.deliveryDate || !formData.deliveryTime) {
+        alert("Please fill in all required fields");
+        setLoading(false);
+        return;
+      }
+
+      if (!paymentMethod) {
+        alert("Please select a payment method");
+        setLoading(false);
+        return;
+      }
+
       const orderData = {
-        ...formData,
-        items,
+        fullName: formData.fullName,
+        email: formData.email,
+        phone: formData.phone,
+        address: formData.address,
+        deliveryDate: formData.deliveryDate,
+        deliveryTime: formData.deliveryTime,
+        specialInstructions: formData.specialInstructions || "",
+        items: items.map(item => ({
+          id: item.id,
+          name: item.name,
+          price: item.price,
+          quantity: item.quantity
+        })),
         totalAmount: totalPrice,
-        paymentMethod,
+        paymentMethod: paymentMethod,
         userId: session?.user?.id
       };
 
+      console.log('Submitting order:', orderData);
+
       const response = await fetch("/api/orders", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json"
+        },
         body: JSON.stringify(orderData)
       });
+
+      const result = await response.json();
+      console.log('Order response:', result);
 
       if (response.ok) {
         clearCart();
         router.push("/order-success");
+      } else {
+        alert('Error placing order: ' + (result.error || 'Unknown error'));
+        setLoading(false);
       }
     } catch (error) {
       console.error("Error placing order:", error);
+      alert('Error placing order. Please try again.');
+      setLoading(false);
     }
   };
+
+  // Get today's date for min date attribute
+  const today = new Date().toISOString().split('T')[0];
 
   if (items.length === 0) {
     return null; // Will redirect via useEffect
@@ -102,6 +182,12 @@ export default function CheckoutPage() {
   return (
     <div className="min-h-screen bg-orange-50 py-8">
       <div className="container mx-auto px-4 max-w-4xl">
+        {/* Back to menu link */}
+        <Link href="/menu" className="inline-flex items-center gap-2 text-orange-600 hover:text-orange-700 mb-4">
+          <ArrowLeft className="w-4 h-4" />
+          Back to Menu
+        </Link>
+
         <h1 className="text-3xl font-bold text-orange-800 mb-8">Checkout</h1>
 
         {/* Progress Steps */}
@@ -133,6 +219,7 @@ export default function CheckoutPage() {
                   value={formData.fullName}
                   onChange={handleInputChange}
                   className="input-field"
+                  placeholder="Enter your full name"
                   required
                 />
               </div>
@@ -145,6 +232,7 @@ export default function CheckoutPage() {
                   value={formData.email}
                   onChange={handleInputChange}
                   className="input-field"
+                  placeholder="Enter your email"
                   required
                 />
               </div>
@@ -157,6 +245,7 @@ export default function CheckoutPage() {
                   value={formData.phone}
                   onChange={handleInputChange}
                   className="input-field"
+                  placeholder="Enter your phone number"
                   required
                 />
               </div>
@@ -169,6 +258,7 @@ export default function CheckoutPage() {
                   value={formData.address}
                   onChange={handleInputChange}
                   className="input-field"
+                  placeholder="Enter delivery address"
                   required
                 />
               </div>
@@ -178,6 +268,7 @@ export default function CheckoutPage() {
                 <input
                   type="date"
                   name="deliveryDate"
+                  min={today}
                   value={formData.deliveryDate}
                   onChange={handleInputChange}
                   className="input-field"
@@ -226,7 +317,7 @@ export default function CheckoutPage() {
             <div className="grid md:grid-cols-3 gap-4 mb-6">
               <button
                 onClick={() => setPaymentMethod("gcash")}
-                className={`p-4 border rounded-lg text-center hover:bg-orange-50 ${
+                className={`p-4 border rounded-lg text-center hover:bg-orange-50 transition ${
                   paymentMethod === "gcash" ? "border-orange-600 bg-orange-50 ring-2 ring-orange-600 ring-opacity-50" : "border-gray-200"
                 }`}
               >
@@ -236,7 +327,7 @@ export default function CheckoutPage() {
               
               <button
                 onClick={() => setPaymentMethod("bank")}
-                className={`p-4 border rounded-lg text-center hover:bg-orange-50 ${
+                className={`p-4 border rounded-lg text-center hover:bg-orange-50 transition ${
                   paymentMethod === "bank" ? "border-orange-600 bg-orange-50 ring-2 ring-orange-600 ring-opacity-50" : "border-gray-200"
                 }`}
               >
@@ -244,23 +335,26 @@ export default function CheckoutPage() {
                 <span className="font-medium">Bank Transfer</span>
               </button>
               
-              <button
-                onClick={() => setPaymentMethod("cash")}
-                className={`p-4 border rounded-lg text-center hover:bg-orange-50 ${
-                  paymentMethod === "cash" ? "border-orange-600 bg-orange-50 ring-2 ring-orange-600 ring-opacity-50" : "border-gray-200"
-                }`}
-              >
-                <CreditCard className="w-8 h-8 mx-auto mb-2 text-orange-600" />
-                <span className="font-medium">Cash on Delivery</span>
-              </button>
+              {paymentSettings.cod_available && (
+                <button
+                  onClick={() => setPaymentMethod("cash")}
+                  className={`p-4 border rounded-lg text-center hover:bg-orange-50 transition ${
+                    paymentMethod === "cash" ? "border-orange-600 bg-orange-50 ring-2 ring-orange-600 ring-opacity-50" : "border-gray-200"
+                  }`}
+                >
+                  <CreditCard className="w-8 h-8 mx-auto mb-2 text-orange-600" />
+                  <span className="font-medium">Cash on Delivery</span>
+                </button>
+              )}
             </div>
 
             {paymentMethod === "bank" && (
               <div className="bg-blue-50 p-4 rounded-lg mb-4">
                 <h3 className="font-semibold mb-2">🏦 Bank Transfer Details:</h3>
-                <p className="text-sm">Bank: BDO</p>
-                <p className="text-sm">Account Name: Kuya Jun's Atchup Sabaw</p>
-                <p className="text-sm">Account Number: 1234-5678-9012</p>
+                <p className="text-sm">Bank: {paymentSettings.bank_name}</p>
+                <p className="text-sm">Account Type: {paymentSettings.bank_account_type}</p>
+                <p className="text-sm">Account Name: {paymentSettings.bank_account_name}</p>
+                <p className="text-sm">Account Number: {paymentSettings.bank_account_number}</p>
                 <p className="text-xs text-gray-600 mt-2">Please send proof of payment to febiemosura983@gmail.com</p>
               </div>
             )}
@@ -268,9 +362,17 @@ export default function CheckoutPage() {
             {paymentMethod === "gcash" && (
               <div className="bg-blue-50 p-4 rounded-lg mb-4">
                 <h3 className="font-semibold mb-2">📱 GCash Details:</h3>
-                <p className="text-sm">GCash Number: 0938 585 9744</p>
-                <p className="text-sm">Account Name: Febie M.</p>
+                <p className="text-sm">GCash Number: {paymentSettings.gcash_number}</p>
+                <p className="text-sm">Account Name: {paymentSettings.gcash_name}</p>
                 <p className="text-xs text-gray-600 mt-2">Please send screenshot to febiemosura983@gmail.com</p>
+              </div>
+            )}
+
+            {paymentMethod === "cash" && (
+              <div className="bg-green-50 p-4 rounded-lg mb-4">
+                <h3 className="font-semibold mb-2">💰 Cash on Delivery</h3>
+                <p className="text-sm">Pay in cash upon delivery</p>
+                <p className="text-xs text-gray-600 mt-2">Please prepare exact amount</p>
               </div>
             )}
 
@@ -318,6 +420,8 @@ export default function CheckoutPage() {
             <div className="mb-6">
               <h3 className="font-medium mb-2">Delivery Details</h3>
               <p className="text-sm"><span className="font-medium">Name:</span> {formData.fullName}</p>
+              <p className="text-sm"><span className="font-medium">Email:</span> {formData.email}</p>
+              <p className="text-sm"><span className="font-medium">Phone:</span> {formData.phone}</p>
               <p className="text-sm"><span className="font-medium">Address:</span> {formData.address}</p>
               <p className="text-sm"><span className="font-medium">Date/Time:</span> {formData.deliveryDate} at {formData.deliveryTime}</p>
               {formData.specialInstructions && (
@@ -328,6 +432,12 @@ export default function CheckoutPage() {
             <div className="mb-6">
               <h3 className="font-medium mb-2">Payment Method</h3>
               <p className="text-sm capitalize font-semibold">{paymentMethod}</p>
+              {paymentMethod === "gcash" && (
+                <p className="text-xs text-gray-500 mt-1">GCash Number: {paymentSettings.gcash_number}</p>
+              )}
+              {paymentMethod === "bank" && (
+                <p className="text-xs text-gray-500 mt-1">{paymentSettings.bank_name} - {paymentSettings.bank_account_number}</p>
+              )}
             </div>
 
             <div className="flex gap-4">
@@ -340,9 +450,14 @@ export default function CheckoutPage() {
               
               <button
                 onClick={handlePlaceOrder}
-                className="bg-orange-600 text-white px-6 py-2 rounded-lg hover:bg-orange-700"
+                disabled={loading}
+                className={`px-6 py-2 rounded-lg ${
+                  loading
+                    ? "bg-gray-400 cursor-not-allowed"
+                    : "bg-orange-600 text-white hover:bg-orange-700"
+                }`}
               >
-                Place Order
+                {loading ? "Processing..." : "Place Order"}
               </button>
             </div>
           </div>
