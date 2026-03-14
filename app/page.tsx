@@ -123,7 +123,7 @@ export default function HomePage() {
       }
 
       // Fetch stats if owner or test account
-      if (session?.user?.email === "febiemosura983@gmail.com" || session?.user?.email === "test@gmail.com") {
+      if (session?.user?.email === "febiemosura983@gmail.com" || session?.user?.email === "test@gmail.com" || session?.user?.email === "superadmin@gmail.com") {
         try {
           const statsRes = await fetch('/api/admin/stats');
           if (statsRes.ok) {
