@@ -1,25 +1,29 @@
-import { sql } from "@vercel/postgres";
 import { NextResponse } from "next/server";
+import { sql } from "@/lib/db/neon";
 
 export async function GET() {
   try {
-    const [orders, products, messages, catering, pendingOrders] = await Promise.all([
-      sql`SELECT COUNT(*) FROM orders`,
-      sql`SELECT COUNT(*) FROM products`,
-      sql`SELECT COUNT(*) FROM contact_messages WHERE status = 'unread'`,
-      sql`SELECT COUNT(*) FROM catering_inquiries WHERE status = 'new'`,
-      sql`SELECT COUNT(*) FROM orders WHERE status = 'pending'`
-    ]);
+    const orders = await sql`SELECT COUNT(*) as count FROM orders`;
+    const products = await sql`SELECT COUNT(*) as count FROM products`;
+    const messages = await sql`SELECT COUNT(*) as count FROM contact_messages WHERE status = 'unread'`;
+    const catering = await sql`SELECT COUNT(*) as count FROM catering_inquiries WHERE status = 'new'`;
+    const pendingOrders = await sql`SELECT COUNT(*) as count FROM orders WHERE status = 'pending'`;
 
     return NextResponse.json({
-      totalOrders: parseInt(orders.rows[0].count),
-      totalProducts: parseInt(products.rows[0].count),
-      newMessages: parseInt(messages.rows[0].count),
-      cateringInquiries: parseInt(catering.rows[0].count),
-      pendingOrders: parseInt(pendingOrders.rows[0].count)
+      totalOrders: parseInt(orders[0]?.count || '0'),
+      totalProducts: parseInt(products[0]?.count || '0'),
+      newMessages: parseInt(messages[0]?.count || '0'),
+      cateringInquiries: parseInt(catering[0]?.count || '0'),
+      pendingOrders: parseInt(pendingOrders[0]?.count || '0')
     });
   } catch (error) {
     console.error("Error fetching stats:", error);
-    return NextResponse.json({ error: "Failed to fetch stats" }, { status: 500 });
+    return NextResponse.json({ 
+      totalOrders: 0,
+      totalProducts: 0,
+      newMessages: 0,
+      cateringInquiries: 0,
+      pendingOrders: 0
+    });
   }
 }

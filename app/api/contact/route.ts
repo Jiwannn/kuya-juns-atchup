@@ -1,5 +1,5 @@
-import { sql } from "@vercel/postgres";
 import { NextResponse } from "next/server";
+import { sql } from "@/lib/db/neon";
 
 export async function POST(request: Request) {
   try {
@@ -13,13 +13,14 @@ export async function POST(request: Request) {
       RETURNING id
     `;
 
+    // Create notification for owner
     await sql`
       INSERT INTO notifications (type, title, message, reference_id)
       VALUES (
         'contact', 
         'New Contact Message', 
         ${`From: ${name} - ${subject}`},
-        ${result.rows[0].id}
+        ${result[0].id}
       )
     `;
 
@@ -35,7 +36,7 @@ export async function GET() {
     const messages = await sql`
       SELECT * FROM contact_messages ORDER BY created_at DESC
     `;
-    return NextResponse.json(messages.rows);
+    return NextResponse.json(messages);
   } catch (error) {
     console.error("Error fetching contact messages:", error);
     return NextResponse.json({ error: "Failed to fetch messages" }, { status: 500 });

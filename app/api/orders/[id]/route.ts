@@ -1,19 +1,19 @@
-import { sql } from "@vercel/postgres";
 import { NextResponse } from "next/server";
+import { sql } from "@/lib/db/neon";
 
 export async function GET(
   request: Request,
   { params }: { params: { id: string } }
 ) {
   try {
-    const order = await sql`
+    const orders = await sql`
       SELECT o.*, u.name as customer_name, u.email as customer_email
       FROM orders o
       LEFT JOIN users u ON o.user_id = u.id
       WHERE o.id = ${params.id}
     `;
 
-    if (order.rows.length === 0) {
+    if (orders.length === 0) {
       return NextResponse.json({ error: "Order not found" }, { status: 404 });
     }
 
@@ -25,8 +25,8 @@ export async function GET(
     `;
 
     return NextResponse.json({
-      ...order.rows[0],
-      items: items.rows
+      ...orders[0],
+      items: items
     });
   } catch (error) {
     console.error("Error fetching order:", error);

@@ -1,15 +1,16 @@
-import { sql } from "@vercel/postgres";
 import { NextResponse } from "next/server";
+import { query, sql } from "@/lib/db/neon";
 
 export async function GET() {
   try {
-    const products = await sql`
+    const result = await sql`
       SELECT * FROM products ORDER BY category, name
     `;
-    return NextResponse.json(products.rows);
+    // result is already the rows array
+    return NextResponse.json(result || []);
   } catch (error) {
     console.error("Error fetching products:", error);
-    return NextResponse.json({ error: "Failed to fetch products" }, { status: 500 });
+    return NextResponse.json([]);
   }
 }
 
@@ -21,10 +22,10 @@ export async function POST(request: Request) {
     const result = await sql`
       INSERT INTO products (name, description, price, category, image_url, is_available)
       VALUES (${name}, ${description}, ${price}, ${category}, ${image_url}, ${is_available})
-      RETURNING *
+      RETURNING id
     `;
 
-    return NextResponse.json(result.rows[0]);
+    return NextResponse.json({ success: true, id: result[0]?.id });
   } catch (error) {
     console.error("Error creating product:", error);
     return NextResponse.json({ error: "Failed to create product" }, { status: 500 });

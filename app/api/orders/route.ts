@@ -1,5 +1,5 @@
-import { sql } from "@vercel/postgres";
 import { NextResponse } from "next/server";
+import { sql } from "@/lib/db/neon";
 
 export async function POST(request: Request) {
   try {
@@ -32,7 +32,7 @@ export async function POST(request: Request) {
       ) RETURNING id
     `;
 
-    const orderId = orderResult.rows[0].id;
+    const orderId = orderResult[0].id;
 
     // Insert order items
     for (const item of items) {
@@ -77,8 +77,8 @@ export async function GET(request: Request) {
 
     query += " ORDER BY o.created_at DESC";
 
-    const result = await sql.query(query);
-    return NextResponse.json(result.rows);
+    const result = await sql(query);
+    return NextResponse.json(result);
   } catch (error) {
     console.error("Error fetching orders:", error);
     return NextResponse.json({ error: "Failed to fetch orders" }, { status: 500 });

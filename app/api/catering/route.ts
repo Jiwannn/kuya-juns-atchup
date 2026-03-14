@@ -1,5 +1,5 @@
-import { sql } from "@vercel/postgres";
 import { NextResponse } from "next/server";
+import { sql } from "@/lib/db/neon";
 
 export async function POST(request: Request) {
   try {
@@ -19,7 +19,7 @@ export async function POST(request: Request) {
         'catering', 
         'New Catering Inquiry', 
         ${`From: ${name} - ${event_type} for ${estimated_guests} guests`},
-        ${result.rows[0].id}
+        ${result[0].id}
       )
     `;
 
@@ -35,7 +35,7 @@ export async function GET() {
     const inquiries = await sql`
       SELECT * FROM catering_inquiries ORDER BY created_at DESC
     `;
-    return NextResponse.json(inquiries.rows);
+    return NextResponse.json(inquiries);
   } catch (error) {
     console.error("Error fetching catering inquiries:", error);
     return NextResponse.json({ error: "Failed to fetch inquiries" }, { status: 500 });
