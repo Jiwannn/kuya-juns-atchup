@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import sql from "@/lib/db/neon";
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
@@ -15,7 +17,7 @@ export async function GET(request: Request) {
       LIMIT ${limit}
     `;
     
-    return NextResponse.json(products);
+    return NextResponse.json(products || []);
   } catch (error) {
     console.error("Error fetching popular products:", error);
     return NextResponse.json([]);

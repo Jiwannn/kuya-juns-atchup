@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 
 export default function NewProduct() {
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
@@ -18,7 +18,17 @@ export default function NewProduct() {
     is_available: true
   });
 
-  if (session?.user?.email !== "febiemosura983@gmail.com") {
+  // Check authentication and ownership
+  if (status === "loading") {
+    return <div>Loading...</div>;
+  }
+
+  if (!session) {
+    router.push("/auth/signin");
+    return null;
+  }
+
+  if (session?.user?.email !== "febiemosura983@gmail.com" && session?.user?.email !== "test@gmail.com") {
     router.push("/");
     return null;
   }
@@ -39,6 +49,8 @@ export default function NewProduct() {
 
       if (response.ok) {
         router.push("/admin/products");
+      } else {
+        console.error("Failed to create product");
       }
     } catch (error) {
       console.error("Error creating product:", error);

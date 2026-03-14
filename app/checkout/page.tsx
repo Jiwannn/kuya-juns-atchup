@@ -1,17 +1,23 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useCart } from "@/context/CartContext";
 import { useSession } from "next-auth/react";
-import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { CreditCard, Landmark, Wallet } from "lucide-react";
+import Link from "next/link";
+
+// Completely disable static generation for this page
+export const dynamic = 'force-dynamic';
+export const fetchCache = 'force-no-store';
 
 export default function CheckoutPage() {
   const { items, totalPrice, clearCart } = useCart();
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
   const router = useRouter();
   const [step, setStep] = useState(1);
   const [paymentMethod, setPaymentMethod] = useState("");
+  const [isMounted, setIsMounted] = useState(false);
   const [formData, setFormData] = useState({
     fullName: "",
     email: "",
@@ -21,6 +27,41 @@ export default function CheckoutPage() {
     deliveryTime: "",
     specialInstructions: ""
   });
+
+  // Handle mounting to avoid hydration issues
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  // Redirect if cart is empty - only after mounting
+  useEffect(() => {
+    if (isMounted && items.length === 0) {
+      router.push("/menu");
+    }
+  }, [isMounted, items.length, router]);
+
+  // Don't render anything until after mounting
+  if (!isMounted) {
+    return null;
+  }
+
+  // Show loading while checking authentication
+  if (status === "loading") {
+    return (
+      <div className="min-h-screen bg-orange-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-orange-200 border-t-orange-600 rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading checkout...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Redirect to login if not authenticated
+  if (!session) {
+    router.push("/auth/signin");
+    return null;
+  }
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     setFormData({
@@ -36,7 +77,7 @@ export default function CheckoutPage() {
         items,
         totalAmount: totalPrice,
         paymentMethod,
-        // userId: session?.user?.id
+        userId: session?.user?.id
       };
 
       const response = await fetch("/api/orders", {
@@ -55,8 +96,7 @@ export default function CheckoutPage() {
   };
 
   if (items.length === 0) {
-    router.push("/menu");
-    return null;
+    return null; // Will redirect via useEffect
   }
 
   return (
@@ -86,7 +126,7 @@ export default function CheckoutPage() {
             
             <div className="grid md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Full Name *</label>
                 <input
                   type="text"
                   name="fullName"
@@ -98,7 +138,7 @@ export default function CheckoutPage() {
               </div>
               
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Email *</label>
                 <input
                   type="email"
                   name="email"
@@ -110,7 +150,7 @@ export default function CheckoutPage() {
               </div>
               
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number *</label>
                 <input
                   type="tel"
                   name="phone"
@@ -122,7 +162,7 @@ export default function CheckoutPage() {
               </div>
               
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Delivery Address</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Delivery Address *</label>
                 <input
                   type="text"
                   name="address"
@@ -134,7 +174,7 @@ export default function CheckoutPage() {
               </div>
               
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Delivery Date</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Delivery Date *</label>
                 <input
                   type="date"
                   name="deliveryDate"
@@ -146,7 +186,7 @@ export default function CheckoutPage() {
               </div>
               
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Delivery Time</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Delivery Time *</label>
                 <input
                   type="time"
                   name="deliveryTime"
@@ -165,6 +205,7 @@ export default function CheckoutPage() {
                   onChange={handleInputChange}
                   rows={3}
                   className="input-field"
+                  placeholder="Any special requests? (optional)"
                 />
               </div>
             </div>
@@ -186,7 +227,7 @@ export default function CheckoutPage() {
               <button
                 onClick={() => setPaymentMethod("gcash")}
                 className={`p-4 border rounded-lg text-center hover:bg-orange-50 ${
-                  paymentMethod === "gcash" ? "border-orange-600 bg-orange-50" : "border-gray-200"
+                  paymentMethod === "gcash" ? "border-orange-600 bg-orange-50 ring-2 ring-orange-600 ring-opacity-50" : "border-gray-200"
                 }`}
               >
                 <Wallet className="w-8 h-8 mx-auto mb-2 text-blue-600" />
@@ -196,7 +237,7 @@ export default function CheckoutPage() {
               <button
                 onClick={() => setPaymentMethod("bank")}
                 className={`p-4 border rounded-lg text-center hover:bg-orange-50 ${
-                  paymentMethod === "bank" ? "border-orange-600 bg-orange-50" : "border-gray-200"
+                  paymentMethod === "bank" ? "border-orange-600 bg-orange-50 ring-2 ring-orange-600 ring-opacity-50" : "border-gray-200"
                 }`}
               >
                 <Landmark className="w-8 h-8 mx-auto mb-2 text-green-600" />
@@ -206,7 +247,7 @@ export default function CheckoutPage() {
               <button
                 onClick={() => setPaymentMethod("cash")}
                 className={`p-4 border rounded-lg text-center hover:bg-orange-50 ${
-                  paymentMethod === "cash" ? "border-orange-600 bg-orange-50" : "border-gray-200"
+                  paymentMethod === "cash" ? "border-orange-600 bg-orange-50 ring-2 ring-orange-600 ring-opacity-50" : "border-gray-200"
                 }`}
               >
                 <CreditCard className="w-8 h-8 mx-auto mb-2 text-orange-600" />
@@ -216,20 +257,20 @@ export default function CheckoutPage() {
 
             {paymentMethod === "bank" && (
               <div className="bg-blue-50 p-4 rounded-lg mb-4">
-                <h3 className="font-semibold mb-2">Bank Transfer Details:</h3>
-                <p>Bank: BDO</p>
-                <p>Account Name: Kuya Jun's Atchup Sabaw</p>
-                <p>Account Number: 1234-5678-9012</p>
-                <p className="text-sm text-gray-600 mt-2">Please send the proof of payment to febiemosura983@gmail.com</p>
+                <h3 className="font-semibold mb-2">🏦 Bank Transfer Details:</h3>
+                <p className="text-sm">Bank: BDO</p>
+                <p className="text-sm">Account Name: Kuya Jun's Atchup Sabaw</p>
+                <p className="text-sm">Account Number: 1234-5678-9012</p>
+                <p className="text-xs text-gray-600 mt-2">Please send proof of payment to febiemosura983@gmail.com</p>
               </div>
             )}
 
             {paymentMethod === "gcash" && (
               <div className="bg-blue-50 p-4 rounded-lg mb-4">
-                <h3 className="font-semibold mb-2">GCash Details:</h3>
-                <p>GCash Number: 0938 585 9744</p>
-                <p>Account Name: Febie M.</p>
-                <p className="text-sm text-gray-600 mt-2">Please send the screenshot to febiemosura983@gmail.com</p>
+                <h3 className="font-semibold mb-2">📱 GCash Details:</h3>
+                <p className="text-sm">GCash Number: 0938 585 9744</p>
+                <p className="text-sm">Account Name: Febie M.</p>
+                <p className="text-xs text-gray-600 mt-2">Please send screenshot to febiemosura983@gmail.com</p>
               </div>
             )}
 
@@ -276,14 +317,17 @@ export default function CheckoutPage() {
 
             <div className="mb-6">
               <h3 className="font-medium mb-2">Delivery Details</h3>
-              <p className="text-sm">{formData.fullName}</p>
-              <p className="text-sm">{formData.address}</p>
-              <p className="text-sm">{formData.deliveryDate} at {formData.deliveryTime}</p>
+              <p className="text-sm"><span className="font-medium">Name:</span> {formData.fullName}</p>
+              <p className="text-sm"><span className="font-medium">Address:</span> {formData.address}</p>
+              <p className="text-sm"><span className="font-medium">Date/Time:</span> {formData.deliveryDate} at {formData.deliveryTime}</p>
+              {formData.specialInstructions && (
+                <p className="text-sm"><span className="font-medium">Instructions:</span> {formData.specialInstructions}</p>
+              )}
             </div>
 
             <div className="mb-6">
               <h3 className="font-medium mb-2">Payment Method</h3>
-              <p className="text-sm capitalize">{paymentMethod}</p>
+              <p className="text-sm capitalize font-semibold">{paymentMethod}</p>
             </div>
 
             <div className="flex gap-4">
