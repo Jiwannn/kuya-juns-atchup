@@ -83,7 +83,7 @@ export default function MenuPage() {
   };
 
   // Safely get unique categories
-  const categories = ["all", ...new Set(products.map(p => p.category).filter(Boolean))];
+const categories = ["all", ...Array.from(new Set(products.map(p => p.category).filter(Boolean)))];
 
   if (loading) {
     return (
