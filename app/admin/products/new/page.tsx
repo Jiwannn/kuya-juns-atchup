@@ -6,9 +6,10 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Upload, Image as ImageIcon, X } from "lucide-react";
 
-// Disable static generation for this page
+// Force dynamic rendering and disable static generation
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
+export const revalidate = 0;
 
 export default function NewProduct() {
   const { data: session, status } = useSession();
@@ -30,8 +31,13 @@ export default function NewProduct() {
     setIsMounted(true);
   }, []);
 
+  // Don't render anything until mounted
+  if (!isMounted) {
+    return null;
+  }
+
   // Check authentication and admin role
-  if (status === "loading" || !isMounted) {
+  if (status === "loading") {
     return (
       <div className="min-h-screen bg-orange-50 flex items-center justify-center">
         <div className="text-center">

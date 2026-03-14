@@ -7,9 +7,10 @@ import { useRouter } from "next/navigation";
 import { CreditCard, Landmark, Wallet, ArrowLeft } from "lucide-react";
 import Link from "next/link";
 
-// Disable static generation for this page
+// Force dynamic rendering and disable static generation
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
+export const revalidate = 0;
 
 interface PaymentSettings {
   gcash_number: string;
