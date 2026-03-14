@@ -7,12 +7,11 @@ export default withAuth(
   },
   {
     callbacks: {
-      authorized: ({ token }) => !!token // User must be logged in
+      authorized: ({ token }) => !!token
     },
   }
 );
 
-// Protect ALL routes except auth pages
 export const config = {
   matcher: [
     /*

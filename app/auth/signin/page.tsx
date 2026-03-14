@@ -23,15 +23,14 @@ export default function SignIn() {
         email,
         password,
         redirect: false,
-        callbackUrl: "/dashboard" // Set dashboard as callback
+        callbackUrl: "/"
       });
 
       if (result?.error) {
         setError("Invalid email or password");
         setLoading(false);
       } else {
-        // Successful login - redirect to dashboard
-        router.push("/dashboard");
+        router.push("/");
       }
     } catch (error) {
       setError("An error occurred. Please try again.");

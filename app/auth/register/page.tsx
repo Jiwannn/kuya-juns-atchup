@@ -46,15 +46,14 @@ export default function Register() {
           email: formData.email,
           password: formData.password,
           redirect: false,
-          callbackUrl: "/dashboard"
+          callbackUrl: "/"
         });
 
         if (result?.error) {
           setError("Account created but login failed. Please try signing in.");
           router.push("/auth/signin");
         } else {
-          // Successfully logged in - go to dashboard
-          router.push("/dashboard");
+          router.push("/");
         }
       } else {
         const data = await response.json();
