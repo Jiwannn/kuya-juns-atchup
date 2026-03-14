@@ -2,8 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useCart } from "@/context/CartContext";
-import { Search, ShoppingCart } from "lucide-react";
-import Image from "next/image";
+import { Search } from "lucide-react";
 import ProductCard from "@/components/ProductCard";
 
 interface Product {
@@ -31,6 +30,8 @@ export default function MenuPage() {
   useEffect(() => {
     if (products.length > 0) {
       filterProducts();
+    } else {
+      setFilteredProducts([]);
     }
   }, [selectedCategory, searchQuery, products]);
 
@@ -45,7 +46,6 @@ export default function MenuPage() {
       
       const data = await response.json();
       
-      // Check if data is an array
       if (Array.isArray(data)) {
         setProducts(data);
         setFilteredProducts(data);
@@ -66,6 +66,11 @@ export default function MenuPage() {
   };
 
   const filterProducts = () => {
+    if (!Array.isArray(products) || products.length === 0) {
+      setFilteredProducts([]);
+      return;
+    }
+
     let filtered = [...products];
     
     if (selectedCategory !== "all") {
@@ -75,15 +80,29 @@ export default function MenuPage() {
     if (searchQuery) {
       filtered = filtered.filter(p => 
         p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        p.description.toLowerCase().includes(searchQuery.toLowerCase())
+        (p.description && p.description.toLowerCase().includes(searchQuery.toLowerCase()))
       );
     }
     
     setFilteredProducts(filtered);
   };
 
-  // Safely get unique categories
-const categories = ["all", ...Array.from(new Set(products.map(p => p.category).filter(Boolean)))];
+  const getCategories = () => {
+    if (!Array.isArray(products) || products.length === 0) {
+      return ["all"];
+    }
+    
+    const categoryList: string[] = [];
+    products.forEach(product => {
+      if (product.category && !categoryList.includes(product.category)) {
+        categoryList.push(product.category);
+      }
+    });
+    
+    return ["all", ...categoryList];
+  };
+
+  const categories = getCategories();
 
   if (loading) {
     return (
@@ -119,7 +138,6 @@ const categories = ["all", ...Array.from(new Set(products.map(p => p.category).f
       <div className="container mx-auto px-4">
         <h1 className="text-3xl font-bold text-orange-800 mb-8">Our Menu</h1>
         
-        {/* Search and Filter */}
         <div className="bg-white rounded-lg shadow-md p-4 mb-8">
           <div className="flex flex-col md:flex-row gap-4">
             <div className="flex-1 relative">
@@ -146,7 +164,6 @@ const categories = ["all", ...Array.from(new Set(products.map(p => p.category).f
           </div>
         </div>
 
-        {/* Products Grid */}
         {filteredProducts.length === 0 ? (
           <div className="text-center py-12 bg-white rounded-lg shadow">
             <p className="text-gray-500 text-lg">No products found</p>
