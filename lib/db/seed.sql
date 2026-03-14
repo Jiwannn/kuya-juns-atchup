@@ -11,4 +11,5 @@ INSERT INTO products (name, description, price, category, image_url, is_availabl
 -- Insert owner account (password: admin123 - you should change this)
 -- Note: The password should be hashed using bcrypt
 INSERT INTO users (email, name, password, provider) 
-VALUES ('febiemosura983@gmail.com', 'Febie Mosura', '$2a$10$YourHashedPasswordHere', 'credentials');
+VALUES ('febiemosura983@gmail.com', 'Febie Mosura', '$2a$10$N9qo8uLOickgx2ZMRZoMy.MrN6eUxJZQqZqZqZqZqZqZqZqZqZqZu
+', 'credentials');
