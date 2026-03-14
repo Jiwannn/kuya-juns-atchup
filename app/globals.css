@@ -10,35 +10,148 @@
 }
 
 @layer base {
+  * {
+    @apply border-border;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+  
+  html {
+    overflow-x: hidden;
+    width: 100%;
+  }
+  
   body {
-    @apply bg-orange-50 text-gray-900;
+    @apply bg-orange-50 text-gray-900 antialiased;
+    overflow-x: hidden;
+    width: 100%;
+    position: relative;
+  }
+
+  /* Better touch targets for mobile */
+  button, a {
+    @apply cursor-pointer;
+    min-height: 44px; /* Apple's recommended minimum touch target size */
+    min-width: 44px;
+  }
+
+  /* Improve text readability on mobile */
+  p, h1, h2, h3, h4, h5, h6 {
+    overflow-wrap: break-word;
+    word-wrap: break-word;
+    hyphens: auto;
   }
 }
 
 @layer components {
   .btn-primary {
-    @apply bg-orange-600 text-white px-4 py-2 rounded-lg hover:bg-orange-700 transition-colors;
+    @apply inline-flex items-center justify-center rounded-lg bg-orange-600 px-4 py-3 
+           text-base font-semibold text-white shadow-sm 
+           hover:bg-orange-700 focus:outline-none focus:ring-2 
+           focus:ring-orange-500 focus:ring-offset-2 
+           disabled:opacity-50 disabled:cursor-not-allowed
+           transition-all duration-200 ease-in-out;
+  }
+  
+  .btn-primary-sm {
+    @apply px-3 py-2 text-sm;
+  }
+  
+  .btn-primary-lg {
+    @apply px-6 py-4 text-lg;
   }
   
   .btn-secondary {
-    @apply bg-amber-100 text-orange-800 px-4 py-2 rounded-lg hover:bg-amber-200 transition-colors;
+    @apply inline-flex items-center justify-center rounded-lg 
+           bg-amber-100 px-4 py-3 text-base font-semibold 
+           text-orange-800 shadow-sm hover:bg-amber-200 
+           focus:outline-none focus:ring-2 focus:ring-amber-500 
+           focus:ring-offset-2 disabled:opacity-50 
+           disabled:cursor-not-allowed transition-all duration-200;
   }
   
   .card {
-    @apply bg-white rounded-lg shadow-md overflow-hidden border border-orange-100;
+    @apply relative bg-white rounded-xl shadow-md overflow-hidden 
+           border border-orange-100 hover:shadow-xl 
+           transition-all duration-300;
   }
   
   .input-field {
-    @apply w-full px-4 py-2 border border-orange-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500;
+    @apply w-full rounded-lg border border-orange-200 bg-white 
+           px-4 py-3 text-gray-900 placeholder-gray-400
+           focus:border-orange-500 focus:outline-none focus:ring-2 
+           focus:ring-orange-500 focus:ring-offset-2
+           disabled:cursor-not-allowed disabled:opacity-50
+           transition-colors duration-200;
   }
 
-@keyframes shake {
-  0%, 100% { transform: translateX(0); }
-  10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
-  20%, 40%, 60%, 80% { transform: translateX(5px); }
+  /* Mobile-first container */
+  .container-custom {
+    @apply w-full mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl;
+  }
+
+  /* Responsive text */
+  .responsive-text {
+    @apply text-sm sm:text-base lg:text-lg;
+  }
+
+  /* Responsive headings */
+  h1 {
+    @apply text-3xl sm:text-4xl lg:text-5xl font-bold;
+  }
+  
+  h2 {
+    @apply text-2xl sm:text-3xl lg:text-4xl font-semibold;
+  }
+  
+  h3 {
+    @apply text-xl sm:text-2xl lg:text-3xl font-semibold;
+  }
+
+  /* Grid adjustments for mobile */
+  .grid-cards {
+    @apply grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6;
+  }
+
+  /* Mobile menu improvements */
+  .mobile-menu {
+    @apply fixed inset-0 bg-white z-50 overflow-y-auto;
+  }
+
+  /* Better spacing on mobile */
+  .section-padding {
+    @apply py-8 sm:py-12 lg:py-16;
+  }
+
+  /* Horizontal scroll fix */
+  .overflow-x-auto {
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+  }
+
+  /* Fix for tables on mobile */
+  .table-responsive {
+    @apply overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0;
+  }
 }
 
-.animate-shake {
-  animation: shake 0.5s ease-in-out;
- }
+@layer utilities {
+  /* Hide scrollbar but keep functionality */
+  .hide-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  
+  .hide-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .touch-friendly {
+    @apply p-3 min-h-[44px] min-w-[44px];
+  }
+
+  .break-word {
+    word-break: break-word;
+    overflow-wrap: break-word;
+  }
 }
