@@ -11,8 +11,8 @@ export default function Navbar() {
   const { totalItems, toggleCart } = useCart();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-  // Now TypeScript knows session.user has id, email, name
-  const isAdmin = session?.user?.email === "febiemosura983@gmail.com";
+  // Check if user is admin based on role
+  const isAdmin = session?.user?.role === 'admin';
 
   return (
     <nav className="bg-gradient-to-r from-orange-700 to-orange-600 text-white shadow-lg sticky top-0 z-40">

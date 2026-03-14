@@ -3,7 +3,8 @@
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { Mail, Phone, Calendar, Users as UsersIcon } from "lucide-react";
+import { Mail, Phone, Calendar, Users as UsersIcon, MessageSquare } from "lucide-react";
+import Link from "next/link";
 
 interface Inquiry {
   id: number;
@@ -28,16 +29,25 @@ export default function AdminCatering() {
   useEffect(() => {
     if (status === "unauthenticated") {
       router.push("/auth/signin");
+      return;
     }
 
-    fetchInquiries();
-  }, [status, router]);
+    if (status === "authenticated" && session?.user?.role !== 'admin') {
+      router.push("/");
+      return;
+    }
+
+    if (session?.user?.role === 'admin') {
+      fetchInquiries();
+    }
+  }, [status, session, router]);
 
   const fetchInquiries = async () => {
     try {
+      setLoading(true);
       const response = await fetch("/api/catering");
       const data = await response.json();
-      setInquiries(data);
+      setInquiries(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error("Error fetching inquiries:", error);
     } finally {
@@ -45,23 +55,47 @@ export default function AdminCatering() {
     }
   };
 
-  if (session?.user?.email !== "febiemosura983@gmail.com") {
-    return <div>Access Denied</div>;
+  if (status === "loading" || loading) {
+    return (
+      <div className="min-h-screen bg-orange-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-orange-200 border-t-orange-600 rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading catering inquiries...</p>
+        </div>
+      </div>
+    );
   }
 
-  if (loading) return <div>Loading...</div>;
+  if (session?.user?.role !== 'admin') {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-red-600 mb-4">Access Denied</h1>
+          <p className="text-gray-600">Only administrators can view catering inquiries.</p>
+          <Link href="/" className="inline-block mt-4 bg-orange-600 text-white px-4 py-2 rounded-lg">
+            Go to Home
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-orange-50 p-6">
-      <div className="container mx-auto">
-        <h1 className="text-3xl font-bold text-orange-800 mb-6">Catering Inquiries</h1>
+    <div>
+      <h1 className="text-3xl font-bold text-orange-800 mb-6">Catering Inquiries</h1>
 
-        <div className="space-y-4">
-          {inquiries.map((inquiry) => (
+      <div className="space-y-4">
+        {inquiries.length === 0 ? (
+          <div className="bg-white rounded-lg shadow-md p-12 text-center">
+            <MessageSquare className="w-16 h-16 mx-auto mb-4 text-gray-300" />
+            <p className="text-gray-500 text-lg">No catering inquiries yet</p>
+          </div>
+        ) : (
+          inquiries.map((inquiry) => (
             <div key={inquiry.id} className="bg-white rounded-lg shadow-md p-6">
               <div className="flex justify-between items-start mb-4">
                 <div>
-                  <h2 className="text-xl font-semibold">{inquiry.name}</h2>
+                  <h2 className="text-xl font-semibold text-gray-800">{inquiry.name}</h2>
                   <p className="text-gray-600">{inquiry.event_type}</p>
                 </div>
                 <span className={`px-3 py-1 rounded-full text-sm ${
@@ -88,11 +122,11 @@ export default function AdminCatering() {
                 </div>
                 <div className="flex items-center gap-2">
                   <Calendar className="w-4 h-4 text-gray-400" />
-                  <span>{new Date(inquiry.event_date).toLocaleDateString()}</span>
+                  <span>{inquiry.event_date ? new Date(inquiry.event_date).toLocaleDateString() : 'Not specified'}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <UsersIcon className="w-4 h-4 text-gray-400" />
-                  <span>{inquiry.estimated_guests} guests</span>
+                  <span>{inquiry.estimated_guests || 0} guests</span>
                 </div>
               </div>
 
@@ -104,17 +138,11 @@ export default function AdminCatering() {
 
               <div className="flex justify-between items-center text-sm text-gray-500">
                 <span>Budget: {inquiry.budget_range || 'Not specified'}</span>
-                <span>Received: {new Date(inquiry.created_at).toLocaleString()}</span>
+                <span>Received: {inquiry.created_at ? new Date(inquiry.created_at).toLocaleString() : 'N/A'}</span>
               </div>
             </div>
-          ))}
-
-          {inquiries.length === 0 && (
-            <div className="text-center py-12">
-              <p className="text-gray-500">No catering inquiries yet</p>
-            </div>
-          )}
-        </div>
+          ))
+        )}
       </div>
     </div>
   );

@@ -122,8 +122,8 @@ export default function HomePage() {
         console.error('Error fetching products:', error);
       }
 
-      // Fetch stats if owner or test account
-      if (session?.user?.email === "febiemosura983@gmail.com" || session?.user?.email === "test@gmail.com" || session?.user?.email === "superadmin@gmail.com") {
+      // Fetch stats if user is admin (based on role)
+      if (session?.user?.role === 'admin') {
         try {
           const statsRes = await fetch('/api/admin/stats');
           if (statsRes.ok) {
@@ -197,7 +197,7 @@ export default function HomePage() {
     return null;
   }
 
-  const isOwner = session.user?.email === "febiemosura983@gmail.com" || session.user?.email === "test@gmail.com";
+  const isAdmin = session.user?.role === 'admin';
   const firstName = session.user?.name?.split(' ')[0] || "there";
 
   return (
@@ -226,8 +226,7 @@ export default function HomePage() {
                 <div className="text-right">
                   <p className="text-sm font-medium text-gray-800">{session.user?.name}</p>
                   <p className="text-xs text-gray-500">
-                    {isOwner ? 'Owner' : 'Customer'}
-                    {session.user?.email === "test@gmail.com" && " (Test Account)"}
+                    {isAdmin ? 'Owner' : 'Customer'}
                   </p>
                 </div>
                 <div className="w-10 h-10 bg-gradient-to-br from-orange-100 to-amber-100 rounded-xl flex items-center justify-center">
@@ -263,7 +262,7 @@ export default function HomePage() {
                   {greeting}, {firstName}! 👋
                 </h1>
                 <p className="text-xl text-orange-100 max-w-2xl">
-                  {isOwner 
+                  {isAdmin 
                     ? "Your restaurant is doing great! Here's what's happening today."
                     : "Ready to satisfy your cravings? Check out our delicious menu."}
                 </p>
@@ -283,8 +282,8 @@ export default function HomePage() {
           </div>
         </div>
 
-        {/* Stats Grid - Only for Owner/Test Account */}
-        {isOwner && (
+        {/* Stats Grid - Only for Admin */}
+        {isAdmin && (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
             <div className="bg-white rounded-2xl shadow-lg p-6 hover:shadow-xl transition border border-orange-100">
               <div className="flex items-center justify-between mb-2">
@@ -292,11 +291,11 @@ export default function HomePage() {
                   <TrendingUp className="w-6 h-6 text-orange-600" />
                 </div>
                 <span className="text-green-500 text-sm font-semibold">
-                  {stats?.totalRevenue > 0 ? '+12%' : '0%'}
+                  {(stats?.totalRevenue || 0) > 0 ? '+12%' : '0%'}
                 </span>
               </div>
               <p className="text-2xl font-bold text-gray-800">
-                ₱{stats?.totalRevenue ? stats.totalRevenue.toLocaleString() : '0'}
+                ₱{(stats?.totalRevenue || 0).toLocaleString()}
               </p>
               <p className="text-sm text-gray-500">Today's Revenue</p>
             </div>
@@ -307,7 +306,7 @@ export default function HomePage() {
                   <Package className="w-6 h-6 text-blue-600" />
                 </div>
                 <span className="text-green-500 text-sm font-semibold">
-                  {stats?.totalOrders > 0 ? '+5%' : '0%'}
+                  {(stats?.totalOrders || 0) > 0 ? '+5%' : '0%'}
                 </span>
               </div>
               <p className="text-2xl font-bold text-gray-800">{stats?.totalOrders || 0}</p>
@@ -320,7 +319,7 @@ export default function HomePage() {
                   <Users className="w-6 h-6 text-purple-600" />
                 </div>
                 <span className="text-green-500 text-sm font-semibold">
-                  {stats?.totalCustomers > 0 ? '+8%' : '0%'}
+                  {(stats?.totalCustomers || 0) > 0 ? '+8%' : '0%'}
                 </span>
               </div>
               <p className="text-2xl font-bold text-gray-800">{stats?.totalCustomers || 0}</p>
@@ -333,11 +332,11 @@ export default function HomePage() {
                   <Award className="w-6 h-6 text-amber-600" />
                 </div>
                 <span className="text-green-500 text-sm font-semibold">
-                  {stats?.averageRating > 0 ? stats.averageRating.toFixed(1) : '0'}
+                  {(stats?.averageRating || 0) > 0 ? (stats.averageRating || 0).toFixed(1) : '0'}
                 </span>
               </div>
               <p className="text-2xl font-bold text-gray-800">
-                {stats?.averageRating > 0 ? '⭐'.repeat(Math.floor(stats.averageRating)) : 'No ratings'}
+                {(stats?.averageRating || 0) > 0 ? '⭐'.repeat(Math.floor(stats.averageRating || 0)) : 'No ratings'}
               </p>
               <p className="text-sm text-gray-500">Average Rating</p>
             </div>
@@ -412,8 +411,8 @@ export default function HomePage() {
           </div>
         </div>
 
-        {/* Admin Section - Only for Owner/Test Account */}
-        {isOwner && (
+        {/* Admin Section - Only for Admin */}
+        {isAdmin && (
           <div className="mb-8">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-2xl font-bold text-gray-800">Admin Controls</h2>
