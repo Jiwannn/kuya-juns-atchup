@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { sql } from "@/lib/db/neon";
+import sql from "@/lib/db/neon";
 
 export async function GET() {
   try {
@@ -30,23 +30,5 @@ export async function PATCH(request: Request) {
   } catch (error) {
     console.error("Error updating notification:", error);
     return NextResponse.json({ error: "Failed to update notification" }, { status: 500 });
-  }
-}
-
-// Optional: POST to create a notification manually
-export async function POST(request: Request) {
-  try {
-    const { type, title, message, reference_id } = await request.json();
-
-    const result = await sql`
-      INSERT INTO notifications (type, title, message, reference_id)
-      VALUES (${type}, ${title}, ${message}, ${reference_id})
-      RETURNING id
-    `;
-
-    return NextResponse.json({ success: true, id: result[0].id });
-  } catch (error) {
-    console.error("Error creating notification:", error);
-    return NextResponse.json({ error: "Failed to create notification" }, { status: 500 });
   }
 }

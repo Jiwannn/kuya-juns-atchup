@@ -11,6 +11,7 @@ export default function Navbar() {
   const { totalItems, toggleCart } = useCart();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
+  // Now TypeScript knows session.user has id, email, name
   const isAdmin = session?.user?.email === "febiemosura983@gmail.com";
 
   return (
@@ -32,7 +33,7 @@ export default function Navbar() {
             <Link href="/" className="hover:text-amber-200 transition">Home</Link>
             <Link href="/menu" className="hover:text-amber-200 transition">Menu</Link>
             <Link href="/catering" className="hover:text-amber-200 transition">Catering</Link>
-            <Link href="/about" className="hover:text-amber-200 transition">About</Link> {/* Changed from Contact to About */}
+            <Link href="/about" className="hover:text-amber-200 transition">About</Link>
             
             {isAdmin && (
               <Link href="/admin" className="flex items-center gap-1 bg-amber-500 px-3 py-1 rounded-full text-sm">
@@ -90,7 +91,7 @@ export default function Navbar() {
               <Link href="/" className="hover:text-amber-200 transition" onClick={() => setIsMobileMenuOpen(false)}>Home</Link>
               <Link href="/menu" className="hover:text-amber-200 transition" onClick={() => setIsMobileMenuOpen(false)}>Menu</Link>
               <Link href="/catering" className="hover:text-amber-200 transition" onClick={() => setIsMobileMenuOpen(false)}>Catering</Link>
-              <Link href="/about" className="hover:text-amber-200 transition" onClick={() => setIsMobileMenuOpen(false)}>About</Link> {/* Changed from Contact to About */}
+              <Link href="/about" className="hover:text-amber-200 transition" onClick={() => setIsMobileMenuOpen(false)}>About</Link>
               
               {isAdmin && (
                 <Link href="/admin" className="flex items-center gap-1 bg-amber-500 px-3 py-1 rounded-full text-sm w-fit">

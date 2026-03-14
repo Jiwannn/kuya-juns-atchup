@@ -2,20 +2,7 @@ import NextAuth from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
 import CredentialsProvider from "next-auth/providers/credentials";
 import * as bcrypt from 'bcryptjs';
-import { sql } from "@/lib/db/neon";
-
-import { DefaultSession } from "next-auth";
-
-declare module "next-auth" {
-  interface Session {
-    user: {
-      id?: string;
-      email?: string | null;
-      name?: string | null;
-      image?: string | null;
-    } & DefaultSession["user"];
-  }
-}
+import sql from "@/lib/db/neon";
 
 const handler = NextAuth({
   providers: [
@@ -46,9 +33,9 @@ const handler = NextAuth({
 
           if (!isValid) return null;
 
-          // Return user object in the format NextAuth expects
+          // Return user object with id as string
           return {
-            id: user.id.toString(), // Convert to string if it's a number
+            id: String(user.id),
             email: user.email,
             name: user.name,
           };
@@ -81,7 +68,6 @@ const handler = NextAuth({
       return true;
     },
     async jwt({ token, user }) {
-      // Add user id to token when signing in
       if (user) {
         token.id = user.id;
         token.email = user.email;
@@ -90,7 +76,6 @@ const handler = NextAuth({
       return token;
     },
     async session({ session, token }) {
-      // Add user id to session
       if (session?.user) {
         session.user.id = token.id as string;
         session.user.email = token.email as string;
@@ -101,14 +86,10 @@ const handler = NextAuth({
   },
   pages: {
     signIn: "/auth/signin",
-    error: "/auth/error", // Optional: custom error page
   },
   session: {
     strategy: "jwt",
-    maxAge: 30 * 24 * 60 * 60, // 30 days
   },
-  secret: process.env.NEXTAUTH_SECRET,
-  debug: process.env.NODE_ENV === "development",
 });
 
 export { handler as GET, handler as POST };

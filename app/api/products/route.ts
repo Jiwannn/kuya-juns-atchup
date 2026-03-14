@@ -1,13 +1,10 @@
 import { NextResponse } from "next/server";
-import { query, sql } from "@/lib/db/neon";
+import sql from "@/lib/db/neon";
 
 export async function GET() {
   try {
-    const result = await sql`
-      SELECT * FROM products ORDER BY category, name
-    `;
-    // result is already the rows array
-    return NextResponse.json(result || []);
+    const products = await sql`SELECT * FROM products ORDER BY category, name`;
+    return NextResponse.json(products || []);
   } catch (error) {
     console.error("Error fetching products:", error);
     return NextResponse.json([]);

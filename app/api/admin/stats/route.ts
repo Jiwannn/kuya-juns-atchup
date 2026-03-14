@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { sql } from "@/lib/db/neon";
+import sql from "@/lib/db/neon";
 
 export async function GET() {
   try {

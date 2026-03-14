@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { sql } from "@/lib/db/neon";
+import sql from "@/lib/db/neon";
 
 export async function POST(request: Request) {
   try {
@@ -12,7 +12,6 @@ export async function POST(request: Request) {
       RETURNING id
     `;
 
-    // Create notification for owner
     await sql`
       INSERT INTO notifications (type, title, message, reference_id)
       VALUES (
@@ -32,9 +31,7 @@ export async function POST(request: Request) {
 
 export async function GET() {
   try {
-    const inquiries = await sql`
-      SELECT * FROM catering_inquiries ORDER BY created_at DESC
-    `;
+    const inquiries = await sql`SELECT * FROM catering_inquiries ORDER BY created_at DESC`;
     return NextResponse.json(inquiries);
   } catch (error) {
     console.error("Error fetching catering inquiries:", error);
