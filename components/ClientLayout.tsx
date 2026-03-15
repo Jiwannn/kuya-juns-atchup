@@ -19,10 +19,13 @@ export default function ClientLayout({
     setMounted(true);
   }, []);
   
+  // Check for all pages that should NOT show the navbar
   const isAuthPage = pathname?.startsWith("/auth/") || false;
   const isAdminPage = pathname?.startsWith("/admin/") || false;
+  const isDashboardPage = pathname?.startsWith("/dashboard") || false;
   
-  const showNavbar = !isAuthPage && !isAdminPage && !!session;
+  // Only show navbar on regular pages when logged in (not on auth, admin, or dashboard)
+  const showNavbar = !isAuthPage && !isAdminPage && !isDashboardPage && !!session;
 
   if (!mounted) {
     return null;
