@@ -6,6 +6,7 @@ export default withAuth(
     const token = req.nextauth.token;
     const path = req.nextUrl.pathname;
     
+    // Protect admin routes
     if (path.startsWith('/admin')) {
       if (!token) {
         return NextResponse.redirect(new URL('/auth/signin', req.url));
@@ -14,6 +15,13 @@ export default withAuth(
       if (token.role !== 'admin') {
         console.log('Non-admin attempted to access admin page:', token.email);
         return NextResponse.redirect(new URL('/', req.url));
+      }
+    }
+    
+    // Protect checkout and orders for non-logged in users
+    if (path.startsWith('/checkout') || path.startsWith('/orders')) {
+      if (!token) {
+        return NextResponse.redirect(new URL('/auth/signin', req.url));
       }
     }
     
@@ -29,5 +37,8 @@ export default withAuth(
 export const config = {
   matcher: [
     "/admin/:path*",
+    "/checkout/:path*",
+    "/orders/:path*",
+    "/dashboard/:path*",
   ],
 };
