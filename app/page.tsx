@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { 
-  
   ShoppingBag, 
   Users, 
   Calendar, 
@@ -21,7 +20,8 @@ import {
   TrendingUp,
   Package,
   ChevronRight,
-  Send
+  Send,
+  RefreshCw
 } from "lucide-react";
 
 interface Order {
@@ -142,9 +142,20 @@ export default function HomePage() {
     try {
       setLoading(true);
       
-      // Fetch recent orders
+      // Add timestamp to prevent caching
+      const timestamp = new Date().getTime();
+      
+      // Fetch recent orders with cache-busting
       try {
-        const ordersRes = await fetch('/api/orders?limit=3');
+        const ordersRes = await fetch(`/api/orders?userId=${session?.user?.id}&limit=3&_=${timestamp}`, {
+          headers: {
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache',
+            'Expires': '0'
+          },
+          cache: 'no-store'
+        });
+        
         if (ordersRes.ok) {
           const ordersData = await ordersRes.json();
           setRecentOrders(Array.isArray(ordersData) ? ordersData : []);
@@ -249,7 +260,7 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 via-amber-50 to-orange-50">
-      {/* Main Content - NO NAVBAR HERE! The navbar comes from components/Navbar.tsx */}
+      {/* Main Content */}
       <div className="container mx-auto px-4 py-8">
         {/* Welcome Section */}
         <div className="mb-8">
@@ -456,9 +467,19 @@ export default function HomePage() {
           </div>
         )}
 
-        {/* Recent Orders */}
+        {/* Recent Orders with Refresh Button */}
         <div className="bg-white rounded-2xl shadow-lg p-6 mb-8">
-          <h2 className="text-xl font-bold text-gray-800 mb-4">Recent Orders</h2>
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-bold text-gray-800">Recent Orders</h2>
+            <button
+              onClick={fetchDashboardData}
+              className="text-sm text-orange-600 hover:text-orange-700 flex items-center gap-1"
+            >
+              <RefreshCw className="w-4 h-4" />
+              Refresh
+            </button>
+          </div>
+          
           {recentOrders.length > 0 ? (
             <div className="space-y-4">
               {recentOrders.map((order) => (
@@ -493,11 +514,11 @@ export default function HomePage() {
           )}
         </div>
 
-        {/* Contact Section - Using settings from database */}
+        {/* Contact Section */}
         <div id="contact-section" className="scroll-mt-20">
           <div className="bg-white rounded-3xl shadow-xl overflow-hidden">
             <div className="grid lg:grid-cols-2">
-              {/* Contact Information - NOW USING DATABASE SETTINGS */}
+              {/* Contact Information */}
               <div className="bg-gradient-to-br from-orange-600 to-orange-500 p-8 text-white">
                 <h2 className="text-3xl font-bold mb-6">Get in Touch</h2>
                 <p className="text-orange-100 mb-8">
@@ -550,27 +571,6 @@ export default function HomePage() {
                       <p className="text-sm text-orange-200 mb-1">Business Hours</p>
                       <p className="text-xl font-semibold">{contactSettings.business_hours}</p>
                     </div>
-                  </div>
-                </div>
-
-                <div className="mt-8 pt-8 border-t border-white/20">
-                  <p className="text-sm text-orange-200 mb-3">Follow us on social media</p>
-                  <div className="flex gap-3">
-                    {contactSettings.facebook && contactSettings.facebook !== '#' && (
-                      <a href={contactSettings.facebook} target="_blank" rel="noopener noreferrer" className="w-10 h-10 bg-white/20 backdrop-blur-lg rounded-xl flex items-center justify-center hover:bg-white/30 transition">
-                        <span className="font-bold">f</span>
-                      </a>
-                    )}
-                    {contactSettings.instagram && contactSettings.instagram !== '#' && (
-                      <a href={contactSettings.instagram} target="_blank" rel="noopener noreferrer" className="w-10 h-10 bg-white/20 backdrop-blur-lg rounded-xl flex items-center justify-center hover:bg-white/30 transition">
-                        <span className="font-bold">ig</span>
-                      </a>
-                    )}
-                    {contactSettings.twitter && contactSettings.twitter !== '#' && (
-                      <a href={contactSettings.twitter} target="_blank" rel="noopener noreferrer" className="w-10 h-10 bg-white/20 backdrop-blur-lg rounded-xl flex items-center justify-center hover:bg-white/30 transition">
-                        <span className="font-bold">t</span>
-                      </a>
-                    )}
                   </div>
                 </div>
               </div>
