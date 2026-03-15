@@ -265,7 +265,7 @@ export default function HomePage() {
               <div className="relative z-10">
                 <div className="flex items-center gap-2 text-orange-100 mb-3">
                   <Heart className="w-5 h-5 fill-current" />
-                  <span className="text-sm font-medium">Welcome back!</span>
+                  <span className="text-sm font-medium">Glad you're here!</span>
                 </div>
                 <h1 className="text-4xl md:text-5xl font-bold text-white mb-3">
                   {greeting}, {firstName}! 👋
