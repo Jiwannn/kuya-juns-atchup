@@ -1,44 +1,42 @@
-import type { Metadata } from "next";
-import { Inter } from "next/font/google";
-import "./globals.css";
-import { Providers } from "./providers";
-import ClientLayout from "@/components/ClientLayout";
-import SessionChecker from "@/components/SessionChecker";
+"use client";
 
-const inter = Inter({ subsets: ["latin"] });
+import { useSession } from "next-auth/react";
+import { useRouter, usePathname } from "next/navigation";
+import { useEffect } from "react";
 
-export const metadata: Metadata = {
-  title: "Kuya Jun's Atchup Sabaw Eatery",
-  description: "Affordable and delicious packed meals and food trays",
-  viewport: {
-    width: "device-width",
-    initialScale: 1,
-    maximumScale: 5,
-    userScalable: true,
-  },
-};
+export default function SessionChecker({ children }: { children: React.ReactNode }) {
+  const { data: session, status } = useSession();
+  const router = useRouter();
+  const pathname = usePathname();
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  return (
-    <html lang="en">
-      <head>
-        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5" />
-      </head>
-      <body className={inter.className}>
-        <Providers>
-          <SessionChecker>
-            <ClientLayout>
-              <div className="w-full overflow-x-hidden">
-                {children}
-              </div>
-            </ClientLayout>
-          </SessionChecker>
-        </Providers>
-      </body>
-    </html>
-  );
+  useEffect(() => {
+    // Don't do anything while session is loading
+    if (status === "loading") return;
+
+    // List of public paths that should NEVER redirect
+    const publicPaths = [
+      '/',
+      '/auth/signin',
+      '/auth/register',
+      '/terms',
+      '/privacy',
+      '/menu',
+      '/about',
+      '/catering'
+    ];
+
+    // Check if current path is in public paths
+    const isPublicPath = publicPaths.includes(pathname || '') || 
+                        pathname?.startsWith('/auth/') ||
+                        pathname === '/terms' ||
+                        pathname === '/privacy';
+
+    // If no session and not on a public path, redirect to signin
+    if (!session && !isPublicPath) {
+      console.log('Redirecting to signin from:', pathname);
+      router.push('/auth/signin');
+    }
+  }, [session, status, pathname, router]);
+
+  return <>{children}</>;
 }
