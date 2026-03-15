@@ -64,6 +64,8 @@ export default function OrdersPage() {
     try {
       setLoading(true);
       setError(null);
+      
+      // IMPORTANT: Pass the user ID to get only their orders
       const response = await fetch(`/api/orders?userId=${session?.user?.id}`);
       
       if (!response.ok) {
@@ -83,13 +85,8 @@ export default function OrdersPage() {
   // Helper function to format currency safely
   const formatCurrency = (amount: number | string | undefined): string => {
     if (amount === undefined || amount === null) return '₱0.00';
-    
-    // Convert to number
     const numAmount = typeof amount === 'number' ? amount : parseFloat(amount as string);
-    
-    // Check if it's a valid number
     if (isNaN(numAmount)) return '₱0.00';
-    
     return `₱${numAmount.toFixed(2)}`;
   };
 
@@ -205,9 +202,6 @@ export default function OrdersPage() {
                     <Truck className="w-4 h-4 text-orange-600 mt-1" />
                     <p><span className="font-medium">Estimated Delivery:</span> {getEstimatedDelivery(selectedOrder)}</p>
                   </div>
-                  {selectedOrder.special_instructions && (
-                    <p><span className="font-medium">Special Instructions:</span> {selectedOrder.special_instructions}</p>
-                  )}
                 </div>
               </div>
 
@@ -232,73 +226,6 @@ export default function OrdersPage() {
                 <div className="flex justify-between text-lg font-bold">
                   <span>Total Amount</span>
                   <span className="text-orange-600">{formatCurrency(selectedOrder.total_amount)}</span>
-                </div>
-                <div className="flex justify-between text-sm text-gray-500 mt-2">
-                  <div className="flex items-center gap-1">
-                    <CreditCard className="w-4 h-4" />
-                    <span>Payment Method</span>
-                  </div>
-                  <span className="capitalize">{selectedOrder.payment_method}</span>
-                </div>
-                <div className="flex justify-between text-sm text-gray-500">
-                  <span>Payment Status</span>
-                  <span className={`capitalize ${
-                    selectedOrder.payment_status === 'paid' ? 'text-green-600' : 'text-yellow-600'
-                  }`}>
-                    {selectedOrder.payment_status}
-                  </span>
-                </div>
-              </div>
-
-              {/* Order Timeline */}
-              <div className="border-t pt-4">
-                <h2 className="text-lg font-semibold text-gray-800 mb-3">Order Timeline</h2>
-                <div className="space-y-3">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
-                      <CheckCircle className="w-4 h-4 text-green-600" />
-                    </div>
-                    <div>
-                      <p className="font-medium text-gray-800">Order Placed</p>
-                      <p className="text-sm text-gray-500">{new Date(selectedOrder.created_at).toLocaleString()}</p>
-                    </div>
-                  </div>
-                  
-                  {selectedOrder.status !== 'pending' && (
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                        <Package className="w-4 h-4 text-blue-600" />
-                      </div>
-                      <div>
-                        <p className="font-medium text-gray-800">Order Processed</p>
-                        <p className="text-sm text-gray-500">Your order is being prepared</p>
-                      </div>
-                    </div>
-                  )}
-
-                  {selectedOrder.status === 'completed' && (
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
-                        <Truck className="w-4 h-4 text-green-600" />
-                      </div>
-                      <div>
-                        <p className="font-medium text-gray-800">Delivered</p>
-                        <p className="text-sm text-gray-500">Your order has been delivered</p>
-                      </div>
-                    </div>
-                  )}
-
-                  {selectedOrder.status === 'cancelled' && (
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center">
-                        <XCircle className="w-4 h-4 text-red-600" />
-                      </div>
-                      <div>
-                        <p className="font-medium text-gray-800">Order Cancelled</p>
-                        <p className="text-sm text-gray-500">This order has been cancelled</p>
-                      </div>
-                    </div>
-                  )}
                 </div>
               </div>
             </div>

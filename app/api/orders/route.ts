@@ -6,17 +6,42 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get("userId");
     const status = searchParams.get("status");
+    const isAdmin = searchParams.get("admin") === "true";
     
-    console.log("🔍 Fetching orders for user:", userId);
+    console.log("🔍 Fetching orders. UserId:", userId, "IsAdmin:", isAdmin);
 
-    // Build the query based on user ID
     let query;
-    
-    if (userId) {
-      // If userId is provided, get only that user's orders
+
+    // If it's an admin request (from admin panel), return all orders
+    if (isAdmin) {
       query = await sql`
         SELECT 
           o.id,
+          o.user_id,
+          o.order_number,
+          o.total_amount,
+          o.status,
+          o.payment_status,
+          o.payment_method,
+          o.delivery_address,
+          o.delivery_date,
+          o.delivery_time,
+          o.special_instructions,
+          o.created_at,
+          o.updated_at,
+          COALESCE(u.name, 'Guest') as customer_name,
+          COALESCE(u.email, 'guest@example.com') as customer_email
+        FROM orders o
+        LEFT JOIN users u ON o.user_id = u.id
+        ORDER BY o.created_at DESC
+      `;
+    } 
+    // If userId is provided (customer request), return only their orders
+    else if (userId) {
+      query = await sql`
+        SELECT 
+          o.id,
+          o.user_id,
           o.order_number,
           o.total_amount,
           o.status,
@@ -35,28 +60,10 @@ export async function GET(request: Request) {
         WHERE o.user_id = ${userId}
         ORDER BY o.created_at DESC
       `;
-    } else {
-      // If no userId (admin view), get all orders
-      query = await sql`
-        SELECT 
-          o.id,
-          o.order_number,
-          o.total_amount,
-          o.status,
-          o.payment_status,
-          o.payment_method,
-          o.delivery_address,
-          o.delivery_date,
-          o.delivery_time,
-          o.special_instructions,
-          o.created_at,
-          o.updated_at,
-          COALESCE(u.name, 'Guest') as customer_name,
-          COALESCE(u.email, 'guest@example.com') as customer_email
-        FROM orders o
-        LEFT JOIN users u ON o.user_id = u.id
-        ORDER BY o.created_at DESC
-      `;
+    } 
+    // If no userId and not admin, return empty (shouldn't happen)
+    else {
+      return NextResponse.json([]);
     }
 
     console.log(`✅ Found ${query.length} orders`);

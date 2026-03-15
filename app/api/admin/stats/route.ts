@@ -3,7 +3,9 @@ import sql from "@/lib/db/neon";
 
 export async function GET() {
   try {
-    // Get order stats
+    console.log("📊 Fetching fresh stats from database...");
+    
+    // Get order stats - EXCLUDE cancelled orders from revenue
     const orders = await sql`
       SELECT 
         COUNT(*) as total,
@@ -11,8 +13,8 @@ export async function GET() {
         COUNT(CASE WHEN status = 'processing' THEN 1 END) as processing,
         COUNT(CASE WHEN status = 'completed' THEN 1 END) as completed,
         COUNT(CASE WHEN status = 'cancelled' THEN 1 END) as cancelled,
-        COALESCE(SUM(total_amount), 0) as total_revenue,
-        COALESCE(SUM(CASE WHEN DATE(created_at) = CURRENT_DATE THEN total_amount ELSE 0 END), 0) as today_revenue
+        COALESCE(SUM(CASE WHEN status = 'completed' THEN total_amount ELSE 0 END), 0) as total_revenue,
+        COALESCE(SUM(CASE WHEN DATE(created_at) = CURRENT_DATE AND status = 'completed' THEN total_amount ELSE 0 END), 0) as today_revenue
       FROM orders
     `;
 
@@ -40,6 +42,12 @@ export async function GET() {
     `;
 
     const orderStats = orders[0] || {};
+
+    console.log("✅ Stats fetched:", {
+      totalOrders: orderStats.total,
+      completedOrders: orderStats.completed,
+      totalRevenue: orderStats.total_revenue
+    });
 
     return NextResponse.json({
       totalOrders: parseInt(orderStats.total) || 0,
