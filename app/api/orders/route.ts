@@ -1,41 +1,72 @@
 import { NextResponse } from "next/server";
 import sql from "@/lib/db/neon";
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
-    console.log("🔍 Fetching all orders...");
+    const { searchParams } = new URL(request.url);
+    const userId = searchParams.get("userId");
+    const status = searchParams.get("status");
     
-    // Simple query to get all orders with user info
-    const orders = await sql`
-      SELECT 
-        o.id,
-        o.order_number,
-        o.total_amount,
-        o.status,
-        o.payment_status,
-        o.payment_method,
-        o.delivery_address,
-        o.delivery_date,
-        o.delivery_time,
-        o.special_instructions,
-        o.created_at,
-        COALESCE(u.name, 'Guest') as customer_name,
-        COALESCE(u.email, 'guest@example.com') as customer_email
-      FROM orders o
-      LEFT JOIN users u ON o.user_id = u.id
-      ORDER BY o.created_at DESC
-    `;
+    console.log("🔍 Fetching orders for user:", userId);
+
+    // Build the query based on user ID
+    let query;
     
-    console.log(`✅ Found ${orders.length} orders`);
-    console.log("First order:", orders[0]);
-    
-    return NextResponse.json(orders);
+    if (userId) {
+      // If userId is provided, get only that user's orders
+      query = await sql`
+        SELECT 
+          o.id,
+          o.order_number,
+          o.total_amount,
+          o.status,
+          o.payment_status,
+          o.payment_method,
+          o.delivery_address,
+          o.delivery_date,
+          o.delivery_time,
+          o.special_instructions,
+          o.created_at,
+          o.updated_at,
+          COALESCE(u.name, 'Guest') as customer_name,
+          COALESCE(u.email, 'guest@example.com') as customer_email
+        FROM orders o
+        LEFT JOIN users u ON o.user_id = u.id
+        WHERE o.user_id = ${userId}
+        ORDER BY o.created_at DESC
+      `;
+    } else {
+      // If no userId (admin view), get all orders
+      query = await sql`
+        SELECT 
+          o.id,
+          o.order_number,
+          o.total_amount,
+          o.status,
+          o.payment_status,
+          o.payment_method,
+          o.delivery_address,
+          o.delivery_date,
+          o.delivery_time,
+          o.special_instructions,
+          o.created_at,
+          o.updated_at,
+          COALESCE(u.name, 'Guest') as customer_name,
+          COALESCE(u.email, 'guest@example.com') as customer_email
+        FROM orders o
+        LEFT JOIN users u ON o.user_id = u.id
+        ORDER BY o.created_at DESC
+      `;
+    }
+
+    console.log(`✅ Found ${query.length} orders`);
+    return NextResponse.json(query);
   } catch (error) {
     console.error("❌ Error fetching orders:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch orders", details: String(error) },
-      { status: 500 }
-    );
+    return NextResponse.json({ 
+      error: "Failed to fetch orders",
+      details: String(error)
+    }, { status: 500 });
   }
 }
 
@@ -59,7 +90,7 @@ export async function POST(request: Request) {
     // Generate unique order number
     const orderNumber = `ORD-${Date.now()}-${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
 
-    console.log('Creating order for:', { fullName, email, userId });
+    console.log('📝 Creating order for:', { fullName, email, userId });
 
     // Insert order
     const orderResult = await sql`
@@ -97,13 +128,16 @@ export async function POST(request: Request) {
       )
     `;
 
+    console.log('✅ Order created successfully:', { orderId, orderNumber });
+
     return NextResponse.json({ 
       success: true, 
       orderId, 
-      orderNumber 
+      orderNumber,
+      message: 'Order placed successfully' 
     });
   } catch (error) {
-    console.error("Error creating order:", error);
+    console.error("❌ Error creating order:", error);
     return NextResponse.json({ 
       success: false,
       error: "Failed to create order" 
