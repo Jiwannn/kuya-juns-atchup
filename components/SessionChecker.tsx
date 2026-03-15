@@ -10,20 +10,32 @@ export default function SessionChecker({ children }: { children: React.ReactNode
   const pathname = usePathname();
 
   useEffect(() => {
-    if (status === "unauthenticated") {
-      // If not authenticated and not on auth page, redirect to signin
-      if (!pathname?.startsWith('/auth/') && pathname !== '/') {
-        console.log('No session, redirecting to login...');
+    // Public routes that don't require authentication
+    const publicRoutes = [
+      '/',
+      '/auth/signin',
+      '/auth/register',
+      '/terms',
+      '/privacy',
+      '/menu',
+      '/about',
+      '/catering'
+    ];
+    
+    // Check if current path is a public route
+    const isPublicRoute = publicRoutes.some(route => 
+      pathname === route || 
+      pathname?.startsWith('/auth/') ||
+      pathname === '/terms' ||
+      pathname === '/privacy'
+    );
+
+    if (status === "unauthenticated" || (!session && status !== "loading")) {
+      // Only redirect if not on a public route
+      if (!isPublicRoute) {
+        console.log('No session, redirecting to login from:', pathname);
         router.push('/auth/signin');
       }
-    }
-
-    // Also check if session expired but still on protected page
-    if (status === "loading") return;
-    
-    if (!session && !pathname?.startsWith('/auth/') && pathname !== '/') {
-      console.log('Session expired, redirecting...');
-      router.push('/auth/signin');
     }
   }, [status, session, pathname, router]);
 
