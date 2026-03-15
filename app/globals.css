@@ -2,6 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Minimal custom styles - only what's absolutely necessary */
 :root {
   --primary: #c2410c;
   --primary-light: #f97316;
@@ -9,277 +10,40 @@
   --accent: #b45309;
 }
 
-@layer base {
-  * {
-    max-width: 100%;
-    box-sizing: border-box;
-  }
-  
-  html {
-    overflow-x: hidden;
-    width: 100%;
-  }
-  
-  body {
-    background-color: #fff7ed;
-    color: #111827;
-    overflow-x: hidden;
-    width: 100%;
-    position: relative;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-  }
+/* Basic layout fixes */
+html, body {
+  overflow-x: hidden;
+  width: 100%;
+}
 
-  /* Better touch targets for mobile */
+body {
+  background-color: #fff7ed;
+  color: #111827;
+}
+
+/* Touch-friendly buttons */
+button, a {
+  cursor: pointer;
+}
+
+@media (max-width: 640px) {
   button, a {
-    cursor: pointer;
     min-height: 44px;
     min-width: 44px;
   }
-
-  /* Improve text readability on mobile */
-  p, h1, h2, h3, h4, h5, h6 {
-    overflow-wrap: break-word;
-    word-wrap: break-word;
-    hyphens: auto;
-  }
 }
 
-@layer components {
-  .btn-primary {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 0.5rem;
-    background-color: #ea580c;
-    padding: 0.75rem 1rem;
-    font-size: 1rem;
-    font-weight: 600;
-    color: white;
-    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-    transition-property: all;
-    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-    transition-duration: 200ms;
-  }
-  
-  .btn-primary:hover {
-    background-color: #c2410c;
-  }
-  
-  .btn-primary:focus {
-    outline: 2px solid transparent;
-    outline-offset: 2px;
-    ring: 2px solid #f97316;
-    ring-offset: 2px;
-  }
-  
-  .btn-primary:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
-  
-  .btn-primary-sm {
-    padding: 0.5rem 0.75rem;
-    font-size: 0.875rem;
-  }
-  
-  .btn-primary-lg {
-    padding: 1rem 1.5rem;
-    font-size: 1.125rem;
-  }
-  
-  .btn-secondary {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 0.5rem;
-    background-color: #fef3c7;
-    padding: 0.75rem 1rem;
-    font-size: 1rem;
-    font-weight: 600;
-    color: #9a3412;
-    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-    transition-property: all;
-    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-    transition-duration: 200ms;
-  }
-  
-  .btn-secondary:hover {
-    background-color: #fde68a;
-  }
-  
-  .btn-secondary:focus {
-    outline: 2px solid transparent;
-    outline-offset: 2px;
-    ring: 2px solid #fbbf24;
-    ring-offset: 2px;
-  }
-  
-  .btn-secondary:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
-  
-  .card {
-    position: relative;
-    background-color: white;
-    border-radius: 0.75rem;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-    overflow: hidden;
-    border: 1px solid #ffedd5;
-    transition-property: all;
-    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-    transition-duration: 300ms;
-  }
-  
-  .card:hover {
-    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-  }
-  
-  .input-field {
-    width: 100%;
-    border-radius: 0.5rem;
-    border: 1px solid #fed7aa;
-    background-color: white;
-    padding: 0.75rem 1rem;
-    color: #111827;
-    transition-property: color, background-color, border-color, text-decoration-color, fill, stroke;
-    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-    transition-duration: 200ms;
-  }
-  
-  .input-field:focus {
-    outline: 2px solid transparent;
-    outline-offset: 2px;
-    ring: 2px solid #f97316;
-    border-color: transparent;
-  }
-  
-  .input-field::placeholder {
-    color: #9ca3af;
-  }
-  
-  .input-field:disabled {
-    cursor: not-allowed;
-    opacity: 0.5;
-  }
-
-  /* Mobile-first container */
-  .container-custom {
-    width: 100%;
-    margin-left: auto;
-    margin-right: auto;
-    padding-left: 1rem;
-    padding-right: 1rem;
-    max-width: 80rem;
-  }
-  
-  @media (min-width: 640px) {
-    .container-custom {
-      padding-left: 1.5rem;
-      padding-right: 1.5rem;
-    }
-  }
-  
-  @media (min-width: 1024px) {
-    .container-custom {
-      padding-left: 2rem;
-      padding-right: 2rem;
-    }
-  }
-
-  /* Grid adjustments for mobile */
-  .grid-cards {
-    display: grid;
-    grid-template-columns: repeat(1, minmax(0, 1fr));
-    gap: 1rem;
-  }
-  
-  @media (min-width: 640px) {
-    .grid-cards {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 1.5rem;
-    }
-  }
-  
-  @media (min-width: 1024px) {
-    .grid-cards {
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-    }
-  }
-  
-  @media (min-width: 1280px) {
-    .grid-cards {
-      grid-template-columns: repeat(4, minmax(0, 1fr));
-    }
-  }
-
-  /* Better spacing on mobile */
-  .section-padding {
-    padding-top: 2rem;
-    padding-bottom: 2rem;
-  }
-  
-  @media (min-width: 640px) {
-    .section-padding {
-      padding-top: 3rem;
-      padding-bottom: 3rem;
-    }
-  }
-  
-  @media (min-width: 1024px) {
-    .section-padding {
-      padding-top: 4rem;
-      padding-bottom: 4rem;
-    }
-  }
-
-  /* Horizontal scroll fix */
-  .overflow-x-auto {
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: thin;
-  }
-
-  /* Fix for tables on mobile */
-  .table-responsive {
-    overflow-x: auto;
-    margin-left: -1rem;
-    margin-right: -1rem;
-    padding-left: 1rem;
-    padding-right: 1rem;
-  }
-  
-  @media (min-width: 640px) {
-    .table-responsive {
-      margin-left: 0;
-      margin-right: 0;
-      padding-left: 0;
-      padding-right: 0;
-    }
-  }
+/* Simple utility classes */
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
 
-@layer utilities {
-  /* Hide scrollbar but keep functionality */
-  .hide-scrollbar {
-    -ms-overflow-style: none;
-    scrollbar-width: none;
-  }
-  
-  .hide-scrollbar::-webkit-scrollbar {
-    display: none;
-  }
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
 
-  /* Touch-friendly spacing */
-  .touch-friendly {
-    padding: 0.75rem;
-    min-height: 44px;
-    min-width: 44px;
-  }
-
-  /* Prevent text overflow */
-  .break-word {
-    word-break: break-word;
-    overflow-wrap: break-word;
-  }
+.break-word {
+  word-break: break-word;
+  overflow-wrap: break-word;
 }
