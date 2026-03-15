@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { Bell, X, CheckCheck } from "lucide-react";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 interface Notification {
   id: number;
@@ -13,19 +14,22 @@ interface Notification {
   is_read: boolean;
   created_at: string;
   reference_id: number;
+  user_id?: number; // For customer notifications
 }
 
 export default function NotificationBell() {
   const { data: session } = useSession();
+  const router = useRouter();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const isAdmin = session?.user?.role === 'admin';
+  const isLoggedIn = !!session;
 
   useEffect(() => {
-    if (!isAdmin) return;
+    if (!isLoggedIn) return;
 
     fetchNotifications();
     
@@ -45,11 +49,13 @@ export default function NotificationBell() {
       clearInterval(interval);
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [isAdmin]);
+  }, [isLoggedIn]);
 
   const fetchNotifications = async () => {
     try {
-      const response = await fetch('/api/notifications');
+      // For customers, fetch their notifications
+      const url = isAdmin ? '/api/notifications' : '/api/notifications?user=true';
+      const response = await fetch(url);
       if (response.ok) {
         const data = await response.json();
         setNotifications(Array.isArray(data) ? data : []);
@@ -83,16 +89,68 @@ export default function NotificationBell() {
     fetchNotifications();
   };
 
-  const getNotificationLink = (notification: Notification) => {
-    switch(notification.type) {
-      case 'new_order':
-        return `/admin/orders/${notification.reference_id}`;
-      case 'contact':
-        return `/admin/messages`;
-      case 'catering':
-        return `/admin/catering`;
-      default:
-        return '#';
+  const handleNotificationClick = (notification: Notification) => {
+    // Mark as read
+    if (!notification.is_read) {
+      markAsRead(notification.id);
+    }
+    
+    // Close dropdown
+    setIsOpen(false);
+    
+    // Navigate based on notification type and user role
+    if (isAdmin) {
+      // Admin navigation
+      switch(notification.type) {
+        case 'new_order':
+          router.push(`/admin/orders/${notification.reference_id}`);
+          break;
+        case 'contact':
+          router.push('/admin/messages');
+          break;
+        case 'catering':
+          router.push('/admin/catering');
+          break;
+        case 'new_review':
+          router.push('/admin/reviews');
+          break;
+        default:
+          router.push('/admin');
+      }
+    } else {
+      // Customer navigation
+      switch(notification.type) {
+        case 'order_status':
+        case 'order_update':
+        case 'new_order': // For customers, this means their order was placed
+          router.push('/orders');
+          break;
+        case 'review_response':
+          router.push('/menu');
+          break;
+        default:
+          router.push('/');
+      }
+    }
+  };
+
+  const getNotificationIcon = (notification: Notification) => {
+    if (isAdmin) {
+      switch(notification.type) {
+        case 'new_order': return '📦';
+        case 'contact': return '📧';
+        case 'catering': return '🎉';
+        case 'new_review': return '⭐';
+        default: return '🔔';
+      }
+    } else {
+      switch(notification.type) {
+        case 'order_status': return '🔄';
+        case 'order_update': return '📦';
+        case 'new_order': return '✅';
+        case 'review_response': return '💬';
+        default: return '🔔';
+      }
     }
   };
 
@@ -111,7 +169,7 @@ export default function NotificationBell() {
     return date.toLocaleDateString();
   };
 
-  if (!isAdmin) return null;
+  if (!isLoggedIn) return null;
 
   return (
     <div className="relative" ref={dropdownRef}>
@@ -130,7 +188,9 @@ export default function NotificationBell() {
       {isOpen && (
         <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-xl border border-gray-200 z-50">
           <div className="p-3 border-b border-gray-200 flex justify-between items-center">
-            <h3 className="font-semibold text-gray-800">Notifications</h3>
+            <h3 className="font-semibold text-gray-800">
+              {isAdmin ? 'Admin Notifications' : 'Your Notifications'}
+            </h3>
             {unreadCount > 0 && (
               <button
                 onClick={markAllAsRead}
@@ -149,22 +209,19 @@ export default function NotificationBell() {
               </div>
             ) : (
               notifications.slice(0, 5).map((notification) => (
-                <Link
+                <div
                   key={notification.id}
-                  href={getNotificationLink(notification)}
-                  onClick={() => {
-                    if (!notification.is_read) {
-                      markAsRead(notification.id);
-                    }
-                    setIsOpen(false);
-                  }}
-                  className={`block p-3 border-b border-gray-100 hover:bg-orange-50 transition ${
+                  onClick={() => handleNotificationClick(notification)}
+                  className={`block p-3 border-b border-gray-100 hover:bg-orange-50 transition cursor-pointer ${
                     !notification.is_read ? 'bg-orange-50/50' : ''
                   }`}
                 >
                   <div className="flex justify-between items-start gap-2">
                     <div className="flex-1">
-                      <p className="text-sm font-medium text-gray-800">{notification.title}</p>
+                      <div className="flex items-center gap-2">
+                        <span className="text-lg">{getNotificationIcon(notification)}</span>
+                        <p className="text-sm font-medium text-gray-800">{notification.title}</p>
+                      </div>
                       <p className="text-xs text-gray-500 mt-1 line-clamp-2">{notification.message}</p>
                       <p className="text-xs text-gray-400 mt-1">
                         {formatTime(notification.created_at)}
@@ -173,7 +230,7 @@ export default function NotificationBell() {
                     {!notification.is_read && (
                       <button
                         onClick={(e) => {
-                          e.preventDefault();
+                          e.stopPropagation();
                           markAsRead(notification.id);
                         }}
                         className="text-gray-400 hover:text-gray-600"
@@ -182,19 +239,29 @@ export default function NotificationBell() {
                       </button>
                     )}
                   </div>
-                </Link>
+                </div>
               ))
             )}
           </div>
 
           <div className="p-2 border-t border-gray-200 text-center">
-            <Link
-              href="/admin/notifications"
-              className="text-xs text-orange-600 hover:text-orange-700 font-medium"
-              onClick={() => setIsOpen(false)}
-            >
-              View all notifications
-            </Link>
+            {isAdmin ? (
+              <Link
+                href="/admin/notifications"
+                className="text-xs text-orange-600 hover:text-orange-700 font-medium"
+                onClick={() => setIsOpen(false)}
+              >
+                View all notifications
+              </Link>
+            ) : (
+              <Link
+                href="/orders"
+                className="text-xs text-orange-600 hover:text-orange-700 font-medium"
+                onClick={() => setIsOpen(false)}
+              >
+                View your orders
+              </Link>
+            )}
           </div>
         </div>
       )}

@@ -31,7 +31,7 @@
   /* Better touch targets for mobile */
   button, a {
     @apply cursor-pointer;
-    min-height: 44px; /* Apple's recommended minimum touch target size */
+    min-height: 44px;
     min-width: 44px;
   }
 
@@ -95,19 +95,6 @@
     @apply text-sm sm:text-base lg:text-lg;
   }
 
-  /* Responsive headings */
-  h1 {
-    @apply text-3xl sm:text-4xl lg:text-5xl font-bold;
-  }
-  
-  h2 {
-    @apply text-2xl sm:text-3xl lg:text-4xl font-semibold;
-  }
-  
-  h3 {
-    @apply text-xl sm:text-2xl lg:text-3xl font-semibold;
-  }
-
   /* Grid adjustments for mobile */
   .grid-cards {
     @apply grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6;
@@ -146,10 +133,12 @@
     display: none;
   }
 
+  /* Touch-friendly spacing */
   .touch-friendly {
     @apply p-3 min-h-[44px] min-w-[44px];
   }
 
+  /* Prevent text overflow */
   .break-word {
     word-break: break-word;
     overflow-wrap: break-word;
