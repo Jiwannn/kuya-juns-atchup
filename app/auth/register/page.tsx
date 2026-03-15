@@ -14,6 +14,7 @@ export default function Register() {
     password: "",
     confirmPassword: ""
   });
+  const [agreeTerms, setAgreeTerms] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [registered, setRegistered] = useState(false);
@@ -23,6 +24,13 @@ export default function Register() {
     e.preventDefault();
     setLoading(true);
     setError("");
+
+    // Check if terms are agreed
+    if (!agreeTerms) {
+      setError("You must agree to the Terms of Service and Privacy Policy");
+      setLoading(false);
+      return;
+    }
 
     if (formData.password !== formData.confirmPassword) {
       setError("Passwords do not match");
@@ -326,16 +334,18 @@ export default function Register() {
               <input
                 type="checkbox"
                 id="terms"
+                checked={agreeTerms}
+                onChange={(e) => setAgreeTerms(e.target.checked)}
                 className="w-5 h-5 text-orange-600 border-gray-300 rounded-lg focus:ring-orange-500 transition mt-1"
                 required
               />
               <label htmlFor="terms" className="ml-3 text-sm text-gray-600">
                 I agree to the{' '}
-                <Link href="/terms" className="text-orange-600 hover:text-orange-700 font-medium hover:underline transition">
+                <Link href="/terms" target="_blank" className="text-orange-600 hover:text-orange-700 font-medium hover:underline transition">
                   Terms of Service
                 </Link>{' '}
                 and{' '}
-                <Link href="/privacy" className="text-orange-600 hover:text-orange-700 font-medium hover:underline transition">
+                <Link href="/privacy" target="_blank" className="text-orange-600 hover:text-orange-700 font-medium hover:underline transition">
                   Privacy Policy
                 </Link>
               </label>
