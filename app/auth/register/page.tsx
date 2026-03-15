@@ -321,17 +321,18 @@ export default function Register() {
               </div>
             </div>
 
-            <div className="flex items-center">
+            {/* Terms and Privacy Policy Agreement */}
+            <div className="flex items-start">
               <input
                 type="checkbox"
                 id="terms"
-                className="w-5 h-5 text-orange-600 border-gray-300 rounded-lg focus:ring-orange-500 transition"
+                className="w-5 h-5 text-orange-600 border-gray-300 rounded-lg focus:ring-orange-500 transition mt-1"
                 required
               />
               <label htmlFor="terms" className="ml-3 text-sm text-gray-600">
                 I agree to the{' '}
                 <Link href="/terms" className="text-orange-600 hover:text-orange-700 font-medium hover:underline transition">
-                  Terms
+                  Terms of Service
                 </Link>{' '}
                 and{' '}
                 <Link href="/privacy" className="text-orange-600 hover:text-orange-700 font-medium hover:underline transition">
